@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 
 export default function Navbar() {
@@ -5,7 +7,8 @@ export default function Navbar() {
     <nav
       style={{
         padding: '16px',
-        background: '#eee',
+        borderBottom: '1px solid #ddd',
+        marginBottom: '24px',
         display: 'flex',
         gap: '16px',
       }}
@@ -13,7 +16,7 @@ export default function Navbar() {
       <Link href="/">Home</Link>
       <Link href="/tasks">Task Board</Link>
       <Link href="/tasks/create">Create Task</Link>
-      <Link href="/about">About</Link>
+      <Link href="/profile">Profile</Link>
     </nav>
   )
 }
