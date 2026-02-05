@@ -16,6 +16,7 @@ export default function Navbar() {
       <Link href="/">Home</Link>
       <Link href="/tasks">Task Board</Link>
       <Link href="/tasks/create">Create Task</Link>
+      <Link href="/task-board">TaskBoard</Link>
       <Link href="/profile">Profile</Link>
     </nav>
   )

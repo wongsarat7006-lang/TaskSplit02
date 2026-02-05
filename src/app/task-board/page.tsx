@@ -1,5 +1,4 @@
 'use client'
-
 import TaskCard from '../../components/TaskCard'
 import { useTasks } from '../../context/TaskContext'
 
@@ -16,8 +15,15 @@ export default function TaskBoardPage() {
         Task Board
       </h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
-        <Column title="📝 Todo">
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '24px',
+        }}
+      >
+        <section style={columnStyle}>
+          <h2>📝 Todo</h2>
           {todoTasks.map(task => (
             <TaskCard
               key={task.id}
@@ -27,9 +33,10 @@ export default function TaskBoardPage() {
               onNext={moveTaskNext}
             />
           ))}
-        </Column>
+        </section>
 
-        <Column title="⚙️ Doing">
+        <section style={columnStyle}>
+          <h2>⚙️ Doing</h2>
           {doingTasks.map(task => (
             <TaskCard
               key={task.id}
@@ -39,9 +46,10 @@ export default function TaskBoardPage() {
               onNext={moveTaskNext}
             />
           ))}
-        </Column>
+        </section>
 
-        <Column title="✅ Done">
+        <section style={columnStyle}>
+          <h2>✅ Done</h2>
           {doneTasks.map(task => (
             <TaskCard
               key={task.id}
@@ -51,26 +59,17 @@ export default function TaskBoardPage() {
               onNext={moveTaskNext}
             />
           ))}
-        </Column>
+        </section>
       </div>
     </main>
   )
 }
 
-function Column({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section
-      style={{
-        background: '#f9f9f9',
-        padding: '16px',
-        borderRadius: '12px',
-        minHeight: '300px',
-        display: 'grid',
-        gap: '12px',
-      }}
-    >
-      <h2>{title}</h2>
-      {children}
-    </section>
-  )
+const columnStyle = {
+  background: '#f9f9f9',
+  padding: '16px',
+  borderRadius: '12px',
+  minHeight: '300px',
+  display: 'grid',
+  gap: '12px',
 }
