@@ -1,14 +1,12 @@
 import { TaskProvider } from '../context/TaskContext'
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <TaskProvider>{children}</TaskProvider>
+        <TaskProvider>
+          {children}
+        </TaskProvider>
       </body>
     </html>
   )

@@ -1,27 +1,46 @@
 'use client'
+
 import { createContext, useContext, useState } from 'react'
+
+/* ================= TYPES ================= */
 
 export type TaskStatus = 'todo' | 'doing' | 'done'
 
-export interface Task {
+export type Task = {
   id: number
   title: string
   status: TaskStatus
 }
 
-interface TaskContextType {
+type TaskContextType = {
   tasks: Task[]
+  addTask: (title: string) => void
   moveTaskNext: (id: number) => void
 }
 
+/* ================= CONTEXT ================= */
+
 const TaskContext = createContext<TaskContextType | null>(null)
+
+/* ================= PROVIDER ================= */
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([
-    { id: 1, title: 'Design UI', status: 'todo' },
-    { id: 2, title: 'Setup Database', status: 'doing' },
-    { id: 3, title: 'Deploy App', status: 'done' },
+    { id: 1, title: 'Design home page', status: 'todo' },
+    { id: 2, title: 'Create task board layout', status: 'doing' },
+    { id: 3, title: 'Prepare project presentation', status: 'done' },
   ])
+
+  const addTask = (title: string) => {
+    setTasks(prev => [
+      ...prev,
+      {
+        id: Date.now(),
+        title,
+        status: 'todo',
+      },
+    ])
+  }
 
   const moveTaskNext = (id: number) => {
     setTasks(prev =>
@@ -37,16 +56,18 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <TaskContext.Provider value={{ tasks, moveTaskNext }}>
+    <TaskContext.Provider value={{ tasks, addTask, moveTaskNext }}>
       {children}
     </TaskContext.Provider>
   )
 }
 
+/* ================= HOOK ================= */
+
 export function useTasks() {
   const context = useContext(TaskContext)
   if (!context) {
-    throw new Error('useTasks must be used inside TaskProvider')
+    throw new Error('useTasks must be used within TaskProvider')
   }
   return context
 }

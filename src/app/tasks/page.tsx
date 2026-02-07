@@ -1,7 +1,7 @@
 'use client'
 
-import TaskCard from '../../components/TaskCard'
 import { useTasks } from '../../context/TaskContext'
+import TaskCard from '../../components/TaskCard'
 
 export default function TaskBoardPage() {
   const { tasks, moveTaskNext } = useTasks()
@@ -11,13 +11,26 @@ export default function TaskBoardPage() {
   const doneTasks = tasks.filter(t => t.status === 'done')
 
   return (
-    <main style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '28px', marginBottom: '16px' }}>
-        Task Board
+    <main
+      style={{
+        padding: '24px',
+        maxWidth: '1000px',
+        margin: '0 auto',
+      }}
+    >
+      <h1 style={{ fontSize: '28px', marginBottom: '24px' }}>
+        📋 Task Board
       </h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '24px',
+        }}
+      >
         <Column title="📝 Todo">
+          {todoTasks.length === 0 && <EmptyText />}
           {todoTasks.map(task => (
             <TaskCard
               key={task.id}
@@ -30,6 +43,7 @@ export default function TaskBoardPage() {
         </Column>
 
         <Column title="⚙️ Doing">
+          {doingTasks.length === 0 && <EmptyText />}
           {doingTasks.map(task => (
             <TaskCard
               key={task.id}
@@ -42,6 +56,9 @@ export default function TaskBoardPage() {
         </Column>
 
         <Column title="✅ Done">
+          {doneTasks.length === 0 && (
+  <EmptyText text="No completed tasks" />
+)}
           {doneTasks.map(task => (
             <TaskCard
               key={task.id}
@@ -57,7 +74,15 @@ export default function TaskBoardPage() {
   )
 }
 
-function Column({ title, children }: { title: string; children: React.ReactNode }) {
+/* ================= COMPONENTS ================= */
+
+function Column({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
   return (
     <section
       style={{
@@ -74,3 +99,18 @@ function Column({ title, children }: { title: string; children: React.ReactNode 
     </section>
   )
 }
+
+function EmptyText({ text = 'No tasks' }: { text?: string }) {
+  return (
+    <p
+      style={{
+        color: '#999',
+        fontSize: '14px',
+        marginTop: '8px',
+      }}
+    >
+      {text}
+    </p>
+  )
+}
+
