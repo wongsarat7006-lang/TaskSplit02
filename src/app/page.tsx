@@ -4,67 +4,204 @@ export default function HomePage() {
   return (
     <main
       style={{
-        padding: '32px',
-        maxWidth: '900px',
-        margin: '0 auto',
+        minHeight: '100vh',
+        background: 'linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%)',
+        padding: '40px 24px',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
       }}
     >
-      <h1 style={{ fontSize: '32px', marginBottom: '8px' }}>
-        TaskSplit02
-      </h1>
-
-      <p style={{ color: '#555', marginBottom: '24px' }}>
-        TaskSplit02 is a simple task management web application
-        built with Next.js. This project helps users organize,
-        create, and manage tasks in one place.
-      </p>
-
-      <section
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        {/* Header */}
+        <header
+  style={{
+    marginBottom: '56px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  }}
+>
+  {/* ซ้าย: Logo + Profile */}
+  <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+    <div>
+      <h1
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '16px',
+          fontSize: '34px',
+          fontWeight: 800,
+          margin: 0,
+          color: '#1f2937',
         }}
       >
-        {/* Task Board */}
-        <div
-          style={{
-            border: '1px solid #ddd',
-            padding: '16px',
-            borderRadius: '8px',
-          }}
-        >
-          <h2>📋 Task Board</h2>
-          <p>View all tasks and track progress.</p>
-          <Link href="/tasks">Go to Task Board →</Link>
-        </div>
+        TaskSplit
+      </h1>
+      <p
+        style={{
+          fontSize: '14px',
+          color: '#6b7280',
+          marginTop: '4px',
+        }}
+      >
+        ระบบจัดการงานสำหรับทีมและโปรเจกต์
+      </p>
+    </div>
 
-        {/* Create Task */}
-        <div
-          style={{
-            border: '1px solid #ddd',
-            padding: '16px',
-            borderRadius: '8px',
-          }}
-        >
-          <h2>➕ Create Task</h2>
-          <p>Add a new task to your board.</p>
-          <Link href="/tasks/create">Create new task →</Link>
-        </div>
+    {/* Profile */}
+    <Link
+      href="/profile"
+      style={{
+        padding: '10px 16px',
+        background: '#ffffff',
+        color: '#4f46e5',
+        textDecoration: 'none',
+        borderRadius: '10px',
+        fontSize: '14px',
+        fontWeight: 600,
+        border: '2px solid #4f46e5',
+      }}
+    >
+      👤 Profile
+    </Link>
+  </div>
 
-        {/* Profile */}
-        <div
+  {/* ขวา: Task Board */}
+  <Link
+    href="/tasks"
+    style={{
+      padding: '10px 20px',
+      background: '#4f46e5',
+      color: '#fff',
+      textDecoration: 'none',
+      borderRadius: '10px',
+      fontSize: '14px',
+      fontWeight: 600,
+    }}
+  >
+    ไปที่ Task Board
+  </Link>
+</header>
+
+
+        {/* Hero */}
+        <section
           style={{
-            border: '1px solid #ddd',
-            padding: '16px',
-            borderRadius: '8px',
+            textAlign: 'center',
+            marginBottom: '64px',
           }}
         >
-          <h2>👤 Profile</h2>
-          <p>View user profile information.</p>
-          <Link href="/profile">Go to Profile →</Link>
-        </div>
-      </section>
+          <h2
+            style={{
+              fontSize: '44px',
+              fontWeight: 800,
+              color: '#111827',
+              marginBottom: '16px',
+              lineHeight: 1.2,
+            }}
+          >
+            จัดการงานให้เป็นระบบ<br />ในที่เดียว
+          </h2>
+          <p
+            style={{
+              fontSize: '18px',
+              color: '#4b5563',
+              maxWidth: '680px',
+              margin: '0 auto 32px',
+              lineHeight: 1.6,
+            }}
+          >
+            สร้าง แบ่ง และติดตามงานของทีมได้อย่างชัดเจน  
+            ลดความสับสน เพิ่มประสิทธิภาพการทำงาน
+          </p>
+
+          <Link
+            href="/tasks/create"
+            style={{
+              display: 'inline-block',
+              padding: '14px 36px',
+              background: '#4f46e5',
+              color: '#fff',
+              textDecoration: 'none',
+              borderRadius: '12px',
+              fontSize: '16px',
+              fontWeight: 700,
+              boxShadow: '0 10px 24px rgba(79, 70, 229, 0.35)',
+            }}
+          >
+            + สร้างงานใหม่
+          </Link>
+        </section>
+
+        {/* Features */}
+        <section
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '24px',
+          }}
+        >
+          {[
+            {
+              icon: '📝',
+              title: 'สร้างงานชัดเจน',
+              desc: 'กำหนดรายละเอียด ผู้รับผิดชอบ และวันครบกำหนดได้ในที่เดียว',
+            },
+            {
+              icon: '📊',
+              title: 'เห็นภาพรวมงาน',
+              desc: 'ติดตามสถานะ To Do, Doing และ Done ได้แบบเป็นระบบ',
+            },
+            {
+              icon: '⚡',
+              title: 'ใช้งานง่าย',
+              desc: 'ออกแบบมาให้เข้าใจทันที ไม่ซับซ้อน',
+            },
+          ].map((item) => (
+            <div
+              key={item.title}
+              style={{
+                background: '#ffffff',
+                borderRadius: '16px',
+                padding: '32px',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.06)',
+                border: '1px solid #e5e7eb',
+              }}
+            >
+              <div style={{ fontSize: '40px', marginBottom: '16px' }}>
+                {item.icon}
+              </div>
+              <h3
+                style={{
+                  fontSize: '20px',
+                  marginBottom: '12px',
+                  color: '#111827',
+                  fontWeight: 700,
+                }}
+              >
+                {item.title}
+              </h3>
+              <p
+                style={{
+                  color: '#6b7280',
+                  lineHeight: 1.6,
+                  fontSize: '15px',
+                }}
+              >
+                {item.desc}
+              </p>
+            </div>
+          ))}
+        </section>
+
+        {/* Footer */}
+        <footer
+          style={{
+            marginTop: '80px',
+            textAlign: 'center',
+            color: '#9ca3af',
+            fontSize: '14px',
+          }}
+        >
+          © 2026 TaskSplit · Built with Next.js
+        </footer>
+      </div>
     </main>
   )
 }
