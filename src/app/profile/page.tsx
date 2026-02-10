@@ -1,16 +1,29 @@
+// src/app/profile/page.tsx
 'use client'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useUser } from '../../context/UserContext'
 
 export default function ProfilePage() {
+  const { user, updateUser, changePassword } = useUser()
   const [isEditing, setIsEditing] = useState(false)
   const [showPasswordChange, setShowPasswordChange] = useState(false)
   
   // ข้อมูลโปรไฟล์
-  const [name, setName] = useState('สมชาย ใจดี')
-  const [email, setEmail] = useState('somchai@example.com')
-  const [bio, setBio] = useState('นักพัฒนาเว็บแอปพลิเคชัน')
-  const [phone, setPhone] = useState('081-234-5678')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [bio, setBio] = useState('')
+  const [phone, setPhone] = useState('')
+  
+  // โหลดข้อมูล user เมื่อ component mount
+  useEffect(() => {
+    if (user) {
+      setName(user.name)
+      setEmail(user.email)
+      setBio(user.bio || '')
+      setPhone(user.phone || '')
+    }
+  }, [user])
   
   // ข้อมูลรหัสผ่าน
   const [currentPassword, setCurrentPassword] = useState('')
@@ -18,27 +31,39 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('')
 
   const handleSave = () => {
+    updateUser({ name, email, phone, bio })
     setIsEditing(false)
     alert('บันทึกข้อมูลเรียบร้อยแล้ว')
   }
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
       alert('รหัสผ่านใหม่ไม่ตรงกัน')
       return
     }
-    alert('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว')
-    setShowPasswordChange(false)
-    setCurrentPassword('')
-    setNewPassword('')
-    setConfirmPassword('')
+    
+    if (newPassword.length < 6) {
+      alert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร')
+      return
+    }
+    
+    const success = await changePassword(currentPassword, newPassword)
+    if (success) {
+      alert('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว')
+      setShowPasswordChange(false)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } else {
+      alert('รหัสผ่านปัจจุบันไม่ถูกต้อง')
+    }
   }
 
   return (
     <main
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(to bottom, #fef3c7 0%, #fbbf24 50%, #f59e0b 100%)',
+        background: '#f8fafc',
         padding: '40px 24px',
       }}
     >
@@ -56,21 +81,21 @@ export default function ProfilePage() {
             <h1
               style={{
                 fontSize: '32px',
-                fontWeight: 700,
+                fontWeight: 800,
                 margin: 0,
-                color: '#1a1a1a',
+                color: '#111827',
               }}
             >
-              👤 โปรไฟล์
+              Profile Settings
             </h1>
             <p
               style={{
                 fontSize: '15px',
-                color: '#78716c',
+                color: '#6b7280',
                 margin: '6px 0 0 0',
               }}
             >
-              จัดการข้อมูลส่วนตัวของคุณ
+              จัดการข้อมูลส่วนตัวและความปลอดภัยของบัญชี
             </p>
           </div>
 
@@ -79,13 +104,12 @@ export default function ProfilePage() {
               href="/tasks"
               style={{
                 padding: '12px 24px',
-                background: 'rgba(255, 255, 255, 0.95)',
-                color: '#1a1a1a',
+                background: '#4f46e5',
+                color: '#fff',
                 textDecoration: 'none',
-                borderRadius: '8px',
+                borderRadius: '10px',
                 fontSize: '14px',
                 fontWeight: 600,
-                border: '2px solid rgba(0,0,0,0.1)',
               }}
             >
               บอร์ดงาน
@@ -94,13 +118,13 @@ export default function ProfilePage() {
               href="/"
               style={{
                 padding: '12px 24px',
-                background: 'rgba(255, 255, 255, 0.95)',
-                color: '#1a1a1a',
+                background: '#ffffff',
+                color: '#111827',
                 textDecoration: 'none',
-                borderRadius: '8px',
+                borderRadius: '10px',
                 fontSize: '14px',
                 fontWeight: 600,
-                border: '2px solid rgba(0,0,0,0.1)',
+                border: '1px solid #e5e7eb',
               }}
             >
               หน้าแรก
@@ -111,30 +135,60 @@ export default function ProfilePage() {
         {/* การ์ดโปรไฟล์ */}
         <div
           style={{
-            background: 'rgba(255, 255, 255, 0.95)',
+            background: '#ffffff',
             borderRadius: '16px',
             padding: '40px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-            border: '3px solid #60a5fa',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb',
             marginBottom: '24px',
           }}
         >
-          {/* ปุ่มแก้ไขโปรไฟล์ */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+          {/* ส่วนหัวการ์ด */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '32px',
+              paddingBottom: '20px',
+              borderBottom: '1px solid #f3f4f6',
+            }}
+          >
+            <div>
+              <h2
+                style={{
+                  fontSize: '20px',
+                  fontWeight: 700,
+                  margin: 0,
+                  color: '#111827',
+                }}
+              >
+                👤 ข้อมูลส่วนตัว
+              </h2>
+              <p
+                style={{
+                  fontSize: '14px',
+                  color: '#6b7280',
+                  margin: '4px 0 0 0',
+                }}
+              >
+                จัดการข้อมูลโปรไฟล์ของคุณ
+              </p>
+            </div>
             <button
               onClick={isEditing ? handleSave : () => setIsEditing(true)}
               style={{
                 padding: '10px 20px',
-                background: '#eab308',
-                color: '#1a1a1a',
+                background: isEditing ? '#10b981' : '#4f46e5',
+                color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '14px',
-                fontWeight: 700,
+                fontWeight: 600,
                 cursor: 'pointer',
               }}
             >
-              {isEditing ? '💾 บันทึก' : '✏️ แก้ไขโปรไฟล์'}
+              {isEditing ? '✓ บันทึก' : '✏️ แก้ไข'}
             </button>
           </div>
 
@@ -148,14 +202,15 @@ export default function ProfilePage() {
           >
             <div
               style={{
-                width: '180px',
-                height: '180px',
-                background: '#6b7280',
-                borderRadius: '12px',
+                width: '120px',
+                height: '120px',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                borderRadius: '16px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '64px',
+                fontSize: '48px',
+                boxShadow: '0 10px 25px rgba(102, 126, 234, 0.3)',
               }}
             >
               👤
@@ -169,7 +224,7 @@ export default function ProfilePage() {
               <label
                 style={{
                   display: 'block',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   fontWeight: 600,
                   color: '#374151',
                   marginBottom: '8px',
@@ -184,12 +239,12 @@ export default function ProfilePage() {
                 disabled={!isEditing}
                 style={{
                   width: '100%',
-                  padding: '12px 16px',
+                  padding: '12px 14px',
                   fontSize: '15px',
                   border: '1px solid #d1d5db',
                   borderRadius: '8px',
                   background: isEditing ? '#fff' : '#f9fafb',
-                  color: '#1a1a1a',
+                  color: '#111827',
                   boxSizing: 'border-box',
                 }}
               />
@@ -200,7 +255,7 @@ export default function ProfilePage() {
               <label
                 style={{
                   display: 'block',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   fontWeight: 600,
                   color: '#374151',
                   marginBottom: '8px',
@@ -215,12 +270,12 @@ export default function ProfilePage() {
                 disabled={!isEditing}
                 style={{
                   width: '100%',
-                  padding: '12px 16px',
+                  padding: '12px 14px',
                   fontSize: '15px',
                   border: '1px solid #d1d5db',
                   borderRadius: '8px',
                   background: isEditing ? '#fff' : '#f9fafb',
-                  color: '#1a1a1a',
+                  color: '#111827',
                   boxSizing: 'border-box',
                 }}
               />
@@ -231,7 +286,7 @@ export default function ProfilePage() {
               <label
                 style={{
                   display: 'block',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   fontWeight: 600,
                   color: '#374151',
                   marginBottom: '8px',
@@ -246,12 +301,12 @@ export default function ProfilePage() {
                 disabled={!isEditing}
                 style={{
                   width: '100%',
-                  padding: '12px 16px',
+                  padding: '12px 14px',
                   fontSize: '15px',
                   border: '1px solid #d1d5db',
                   borderRadius: '8px',
                   background: isEditing ? '#fff' : '#f9fafb',
-                  color: '#1a1a1a',
+                  color: '#111827',
                   boxSizing: 'border-box',
                 }}
               />
@@ -262,7 +317,7 @@ export default function ProfilePage() {
               <label
                 style={{
                   display: 'block',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   fontWeight: 600,
                   color: '#374151',
                   marginBottom: '8px',
@@ -277,42 +332,28 @@ export default function ProfilePage() {
                 rows={3}
                 style={{
                   width: '100%',
-                  padding: '12px 16px',
+                  padding: '12px 14px',
                   fontSize: '15px',
                   border: '1px solid #d1d5db',
                   borderRadius: '8px',
                   background: isEditing ? '#fff' : '#f9fafb',
-                  color: '#1a1a1a',
+                  color: '#111827',
                   boxSizing: 'border-box',
-                  resize: 'none',
+                  resize: 'vertical',
                 }}
               />
             </div>
-          </div>
-
-          {/* จุด 3 จุด */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '8px',
-              marginTop: '32px',
-            }}
-          >
-            <div style={{ width: '8px', height: '8px', background: '#9ca3af', borderRadius: '50%' }} />
-            <div style={{ width: '8px', height: '8px', background: '#9ca3af', borderRadius: '50%' }} />
-            <div style={{ width: '8px', height: '8px', background: '#9ca3af', borderRadius: '50%' }} />
           </div>
         </div>
 
         {/* การ์ดเปลี่ยนรหัสผ่าน */}
         <div
           style={{
-            background: 'rgba(255, 255, 255, 0.95)',
+            background: '#ffffff',
             borderRadius: '16px',
             padding: '32px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-            border: '2px solid #ef4444',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb',
           }}
         >
           <div
@@ -320,11 +361,11 @@ export default function ProfilePage() {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '20px',
+              marginBottom: showPasswordChange ? '24px' : '0',
             }}
           >
             <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: '#1a1a1a' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: '#111827' }}>
                 🔒 ความปลอดภัย
               </h2>
               <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0 0' }}>
@@ -335,7 +376,7 @@ export default function ProfilePage() {
               onClick={() => setShowPasswordChange(!showPasswordChange)}
               style={{
                 padding: '10px 20px',
-                background: showPasswordChange ? '#6b7280' : '#ef4444',
+                background: showPasswordChange ? '#6b7280' : '#dc2626',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
@@ -344,18 +385,27 @@ export default function ProfilePage() {
                 cursor: 'pointer',
               }}
             >
-              {showPasswordChange ? 'ยกเลิก' : 'เปลี่ยนรหัสผ่าน'}
+              {showPasswordChange ? '✕ ยกเลิก' : '🔑 เปลี่ยนรหัสผ่าน'}
             </button>
           </div>
 
           {showPasswordChange && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '20px' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                marginTop: '24px',
+                paddingTop: '24px',
+                borderTop: '1px solid #f3f4f6',
+              }}
+            >
               {/* รหัสผ่านปัจจุบัน */}
               <div>
                 <label
                   style={{
                     display: 'block',
-                    fontSize: '14px',
+                    fontSize: '13px',
                     fontWeight: 600,
                     color: '#374151',
                     marginBottom: '8px',
@@ -370,7 +420,7 @@ export default function ProfilePage() {
                   placeholder="กรอกรหัสผ่านปัจจุบัน"
                   style={{
                     width: '100%',
-                    padding: '12px 16px',
+                    padding: '12px 14px',
                     fontSize: '15px',
                     border: '1px solid #d1d5db',
                     borderRadius: '8px',
@@ -384,7 +434,7 @@ export default function ProfilePage() {
                 <label
                   style={{
                     display: 'block',
-                    fontSize: '14px',
+                    fontSize: '13px',
                     fontWeight: 600,
                     color: '#374151',
                     marginBottom: '8px',
@@ -396,10 +446,10 @@ export default function ProfilePage() {
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="กรอกรหัสผ่านใหม่"
+                  placeholder="กรอกรหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)"
                   style={{
                     width: '100%',
-                    padding: '12px 16px',
+                    padding: '12px 14px',
                     fontSize: '15px',
                     border: '1px solid #d1d5db',
                     borderRadius: '8px',
@@ -413,7 +463,7 @@ export default function ProfilePage() {
                 <label
                   style={{
                     display: 'block',
-                    fontSize: '14px',
+                    fontSize: '13px',
                     fontWeight: 600,
                     color: '#374151',
                     marginBottom: '8px',
@@ -428,7 +478,7 @@ export default function ProfilePage() {
                   placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
                   style={{
                     width: '100%',
-                    padding: '12px 16px',
+                    padding: '12px 14px',
                     fontSize: '15px',
                     border: '1px solid #d1d5db',
                     borderRadius: '8px',
@@ -442,17 +492,17 @@ export default function ProfilePage() {
                 onClick={handleChangePassword}
                 style={{
                   padding: '12px 24px',
-                  background: 'linear-gradient(135deg, #7c3aed 0%, #c026d3 100%)',
+                  background: '#4f46e5',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
-                  fontWeight: 700,
+                  fontWeight: 600,
                   cursor: 'pointer',
                   marginTop: '8px',
                 }}
               >
-                ✅ ยืนยันเปลี่ยนรหัสผ่าน
+                ✓ ยืนยันเปลี่ยนรหัสผ่าน
               </button>
             </div>
           )}

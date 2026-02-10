@@ -1,6 +1,6 @@
 'use client'
 
-import TaskCard from '../../components/TaskCard'
+import TaskCard from '../../components/task/TaskCard'
 import { useTasks } from '../../context/TaskContext'
 import Link from 'next/link'
 

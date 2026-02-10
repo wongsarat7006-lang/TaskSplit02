@@ -1,12 +1,20 @@
+// src/app/layout.tsx
 import { TaskProvider } from '../context/TaskContext'
+import { UserProvider } from '../context/UserContext'
 
-export default function RootLayout({ children }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="en">
+    <html lang="th">
       <body>
-        <TaskProvider>
-          {children}
-        </TaskProvider>
+        <UserProvider>
+          <TaskProvider>
+            {children}
+          </TaskProvider>
+        </UserProvider>
       </body>
     </html>
   )

@@ -1,5 +1,5 @@
 'use client'
-import TaskCard from '../../components/TaskCard'
+import TaskCard from '../../components/task/TaskCard'
 import { useTasks } from '../../context/TaskContext'
 
 export default function TaskBoardPage() {
