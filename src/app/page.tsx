@@ -40,7 +40,7 @@ export default function HomePage() {
           marginTop: '4px',
         }}
       >
-        ระบบจัดการงานสำหรับทีมและโปรเจกต์
+        <h3>ระบบจัดการงานที่ต้องทำ Task Board</h3>
       </p>
     </div>
 
@@ -50,12 +50,12 @@ export default function HomePage() {
       style={{
         padding: '10px 16px',
         background: '#ffffff',
-        color: '#4f46e5',
+        color: '#111827',
         textDecoration: 'none',
         borderRadius: '10px',
         fontSize: '14px',
         fontWeight: 600,
-        border: '2px solid #4f46e5',
+        border: '2px solid #111827',
       }}
     >
       👤 Profile
@@ -67,7 +67,7 @@ export default function HomePage() {
     href="/tasks"
     style={{
       padding: '10px 20px',
-      background: '#4f46e5',
+      background: '#111827',
       color: '#fff',
       textDecoration: 'none',
       borderRadius: '10px',
@@ -116,7 +116,7 @@ export default function HomePage() {
             style={{
               display: 'inline-block',
               padding: '14px 36px',
-              background: '#4f46e5',
+              background: '#1f1f1fd7',
               color: '#fff',
               textDecoration: 'none',
               borderRadius: '12px',

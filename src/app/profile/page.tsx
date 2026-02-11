@@ -204,7 +204,7 @@ export default function ProfilePage() {
               style={{
                 width: '120px',
                 height: '120px',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'linear-gradient(135deg, #c2c2c2 0%, #2a2a2a 100%)',
                 borderRadius: '16px',
                 display: 'flex',
                 alignItems: 'center',
@@ -492,7 +492,7 @@ export default function ProfilePage() {
                 onClick={handleChangePassword}
                 style={{
                   padding: '12px 24px',
-                  background: '#4f46e5',
+                  background: '#393939',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '8px',

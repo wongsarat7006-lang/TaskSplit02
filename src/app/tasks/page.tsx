@@ -57,7 +57,7 @@ export default function TaskBoardPage() {
               href="/tasks/create"
               style={{
                 padding: '12px 24px',
-                background: '#4f46e5',
+                background: '#2f2f2ff8',
                 color: '#fff',
                 textDecoration: 'none',
                 borderRadius: '10px',

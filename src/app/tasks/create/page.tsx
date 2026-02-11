@@ -90,7 +90,7 @@ export default function CreateTaskPage() {
               href="/"
               style={{
                 padding: '10px 20px',
-                background: '#ffffff',
+                background: '#5f5f5f22',
                 color: '#0f172a',
                 textDecoration: 'none',
                 borderRadius: 8,
@@ -201,7 +201,7 @@ export default function CreateTaskPage() {
                 style={{
                   padding: '12px 32px',
                   borderRadius: 8,
-                  background: '#4f46e5',
+                  background: '#111827',
                   color: '#fff',
                   fontWeight: 600,
                   border: 'none',

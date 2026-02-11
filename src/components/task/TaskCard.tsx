@@ -151,7 +151,7 @@ export default function TaskCard({
             padding: '10px 14px',
             borderRadius: '8px',
             border: 'none',
-            background: '#4f46e5',
+            background: '#1a1a1a',
             color: '#fff',
             fontSize: '13px',
             fontWeight: 600,
@@ -159,10 +159,10 @@ export default function TaskCard({
             transition: 'background 0.2s',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#4338ca'
+            e.currentTarget.style.background = '#1a1a1a'
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = '#4f46e5'
+            e.currentTarget.style.background = '#1a1a1a'
           }}
         >
           ➜ ย้ายไปขั้นถัดไป
