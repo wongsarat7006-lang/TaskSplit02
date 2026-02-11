@@ -104,7 +104,7 @@ export default function ProfilePage() {
               href="/tasks"
               style={{
                 padding: '12px 24px',
-                background: '#4f46e5',
+                background: '#1e1e1f',
                 color: '#fff',
                 textDecoration: 'none',
                 borderRadius: '10px',
@@ -179,7 +179,7 @@ export default function ProfilePage() {
               onClick={isEditing ? handleSave : () => setIsEditing(true)}
               style={{
                 padding: '10px 20px',
-                background: isEditing ? '#10b981' : '#4f46e5',
+                background: isEditing ? '#10b981' : '#2b2b2b',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
