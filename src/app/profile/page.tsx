@@ -1,11 +1,14 @@
-// src/app/profile/page.tsx
 'use client'
+
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { useUser } from '../../context/UserContext'
+import { useTasks } from '../../context/TaskContext'
 
 export default function ProfilePage() {
   const { user, updateUser, changePassword } = useUser()
+  const { tasks, isDarkMode } = useTasks() 
+  
   const [isEditing, setIsEditing] = useState(false)
   const [showPasswordChange, setShowPasswordChange] = useState(false)
   
@@ -15,7 +18,20 @@ export default function ProfilePage() {
   const [bio, setBio] = useState('')
   const [phone, setPhone] = useState('')
   
-  // โหลดข้อมูล user เมื่อ component mount
+  // --- 1. เพิ่ม State สำหรับรหัสผ่านที่หายไปกลับมา ---
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
+  const theme = {
+    bg: isDarkMode ? '#121212' : '#f8fafc',
+    card: isDarkMode ? '#1e1e1e' : '#ffffff',
+    text: isDarkMode ? '#ffffff' : '#111827',
+    subText: isDarkMode ? '#9ca3af' : '#6b7280',
+    border: isDarkMode ? '#333333' : '#e5e7eb',
+    inputBg: isDarkMode ? '#2d2d2d' : '#ffffff'
+  }
+
   useEffect(() => {
     if (user) {
       setName(user.name)
@@ -24,11 +40,11 @@ export default function ProfilePage() {
       setPhone(user.phone || '')
     }
   }, [user])
-  
-  // ข้อมูลรหัสผ่าน
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+
+  const myTasks = tasks.filter(t => t.assignee === user?.name)
+  const todoCount = myTasks.filter(t => t.status === 'todo').length
+  const doingCount = myTasks.filter(t => t.status === 'doing').length
+  const doneCount = myTasks.filter(t => t.status === 'done').length
 
   const handleSave = () => {
     updateUser({ name, email, phone, bio })
@@ -36,472 +52,87 @@ export default function ProfilePage() {
     alert('บันทึกข้อมูลเรียบร้อยแล้ว')
   }
 
+  // --- 2. ฟังก์ชันจัดการเปลี่ยนรหัสผ่าน ---
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
-      alert('รหัสผ่านใหม่ไม่ตรงกัน')
-      return
+      alert('รหัสผ่านใหม่ไม่ตรงกัน'); return
     }
-    
     if (newPassword.length < 6) {
-      alert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร')
-      return
+      alert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'); return
     }
     
     const success = await changePassword(currentPassword, newPassword)
     if (success) {
       alert('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว')
       setShowPasswordChange(false)
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
+      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('')
     } else {
       alert('รหัสผ่านปัจจุบันไม่ถูกต้อง')
     }
   }
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: '#f8fafc',
-        padding: '40px 24px',
-      }}
-    >
+    <main style={{ minHeight: '100vh', background: theme.bg, padding: '40px 24px', transition: 'all 0.3s' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        {/* ส่วนหัว */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '32px',
-          }}
-        >
+        
+        {/* Header */}
+        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <div>
-            <h1
-              style={{
-                fontSize: '32px',
-                fontWeight: 800,
-                margin: 0,
-                color: '#111827',
-              }}
-            >
-              Profile Settings
-            </h1>
-            <p
-              style={{
-                fontSize: '15px',
-                color: '#6b7280',
-                margin: '6px 0 0 0',
-              }}
-            >
-              จัดการข้อมูลส่วนตัวและความปลอดภัยของบัญชี
-            </p>
+            <h1 style={{ fontSize: '32px', fontWeight: 800, margin: 0, color: theme.text }}>Profile Settings</h1>
+            <p style={{ fontSize: '15px', color: theme.subText, margin: '6px 0 0 0' }}>จัดการข้อมูลส่วนตัวและดูภาพรวมงานของคุณ</p>
           </div>
-
           <div style={{ display: 'flex', gap: '12px' }}>
-            <Link
-              href="/tasks"
-              style={{
-                padding: '12px 24px',
-                background: '#1e1e1f',
-                color: '#fff',
-                textDecoration: 'none',
-                borderRadius: '10px',
-                fontSize: '14px',
-                fontWeight: 600,
-              }}
-            >
-              บอร์ดงาน
-            </Link>
-            <Link
-              href="/"
-              style={{
-                padding: '12px 24px',
-                background: '#ffffff',
-                color: '#111827',
-                textDecoration: 'none',
-                borderRadius: '10px',
-                fontSize: '14px',
-                fontWeight: 600,
-                border: '1px solid #e5e7eb',
-              }}
-            >
-              หน้าแรก
-            </Link>
+            <Link href="/tasks" style={{...secondaryButtonStyle, background: isDarkMode ? '#4f46e5' : '#1e1e1f'}}>บอร์ดงาน</Link>
+            <Link href="/" style={{...whiteButtonStyle, background: theme.card, color: theme.text, border: `1px solid ${theme.border}`}}>หน้าแรก</Link>
           </div>
-        </div>
+        </header>
 
-        {/* การ์ดโปรไฟล์ */}
-        <div
-          style={{
-            background: '#ffffff',
-            borderRadius: '16px',
-            padding: '40px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            border: '1px solid #e5e7eb',
-            marginBottom: '24px',
-          }}
-        >
-          {/* ส่วนหัวการ์ด */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '32px',
-              paddingBottom: '20px',
-              borderBottom: '1px solid #f3f4f6',
-            }}
-          >
-            <div>
-              <h2
-                style={{
-                  fontSize: '20px',
-                  fontWeight: 700,
-                  margin: 0,
-                  color: '#111827',
-                }}
-              >
-                👤 ข้อมูลส่วนตัว
-              </h2>
-              <p
-                style={{
-                  fontSize: '14px',
-                  color: '#6b7280',
-                  margin: '4px 0 0 0',
-                }}
-              >
-                จัดการข้อมูลโปรไฟล์ของคุณ
-              </p>
-            </div>
-            <button
+        {/* สถิติงาน */}
+        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '32px' }}>
+          <StatCard label="งานที่ต้องทำ" count={todoCount} color="#64748b" icon="📝" theme={theme} />
+          <StatCard label="กำลังดำเนินการ" count={doingCount} color="#f59e0b" icon="⚙️" theme={theme} />
+          <StatCard label="เสร็จสิ้นแล้ว" count={doneCount} color="#22c55e" icon="✅" theme={theme} />
+        </section>
+
+        {/* ข้อมูลส่วนตัว */}
+        <div style={{ ...cardStyle, background: theme.card, border: `1px solid ${theme.border}` }}>
+          <div style={{ ...cardHeaderStyle, borderBottom: `1px solid ${theme.border}` }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: theme.text }}>👤 ข้อมูลส่วนตัว</h2>
+            <button 
               onClick={isEditing ? handleSave : () => setIsEditing(true)}
-              style={{
-                padding: '10px 20px',
-                background: isEditing ? '#10b981' : '#2b2b2b',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              style={{ ...primaryButtonStyle, background: isEditing ? '#10b981' : (isDarkMode ? '#4f46e5' : '#2b2b2b') }}
             >
               {isEditing ? '✓ บันทึก' : '✏️ แก้ไข'}
             </button>
           </div>
-
-          {/* รูปโปรไฟล์ */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              marginBottom: '32px',
-            }}
-          >
-            <div
-              style={{
-                width: '120px',
-                height: '120px',
-                background: 'linear-gradient(135deg, #c2c2c2 0%, #2a2a2a 100%)',
-                borderRadius: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '48px',
-                boxShadow: '0 10px 25px rgba(102, 126, 234, 0.3)',
-              }}
-            >
-              👤
-            </div>
-          </div>
-
-          {/* ฟอร์มข้อมูลส่วนตัว */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            {/* ชื่อผู้ใช้ */}
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#374151',
-                  marginBottom: '8px',
-                }}
-              >
-                ชื่อผู้ใช้
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={!isEditing}
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  fontSize: '15px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  background: isEditing ? '#fff' : '#f9fafb',
-                  color: '#111827',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-
-            {/* อีเมล */}
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#374151',
-                  marginBottom: '8px',
-                }}
-              >
-                อีเมล
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={!isEditing}
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  fontSize: '15px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  background: isEditing ? '#fff' : '#f9fafb',
-                  color: '#111827',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-
-            {/* เบอร์โทรศัพท์ */}
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#374151',
-                  marginBottom: '8px',
-                }}
-              >
-                เบอร์โทรศัพท์
-              </label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                disabled={!isEditing}
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  fontSize: '15px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  background: isEditing ? '#fff' : '#f9fafb',
-                  color: '#111827',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-
-            {/* ข้อมูลเพิ่มเติม */}
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#374151',
-                  marginBottom: '8px',
-                }}
-              >
-                เกี่ยวกับฉัน
-              </label>
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                disabled={!isEditing}
-                rows={3}
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  fontSize: '15px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  background: isEditing ? '#fff' : '#f9fafb',
-                  color: '#111827',
-                  boxSizing: 'border-box',
-                  resize: 'vertical',
-                }}
-              />
-            </div>
+            <InputGroup label="ชื่อผู้ใช้" value={name} onChange={setName} disabled={!isEditing} theme={theme} />
+            <InputGroup label="อีเมล" value={email} onChange={setEmail} disabled={!isEditing} theme={theme} />
+            <InputGroup label="เบอร์โทรศัพท์" value={phone} onChange={setPhone} disabled={!isEditing} theme={theme} />
           </div>
         </div>
 
-        {/* การ์ดเปลี่ยนรหัสผ่าน */}
-        <div
-          style={{
-            background: '#ffffff',
-            borderRadius: '16px',
-            padding: '32px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            border: '1px solid #e5e7eb',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: showPasswordChange ? '24px' : '0',
-            }}
-          >
+        {/* --- 3. ส่วนความปลอดภัยที่หายไป กลับมาแล้ว --- */}
+        <div style={{ ...cardStyle, background: theme.card, border: `1px solid ${theme.border}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: '#111827' }}>
-                🔒 ความปลอดภัย
-              </h2>
-              <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0 0' }}>
-                จัดการรหัสผ่านและความปลอดภัยของบัญชี
-              </p>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: theme.text }}>🔒 ความปลอดภัย</h2>
+              <p style={{ fontSize: '14px', color: theme.subText }}>จัดการรหัสผ่านและความปลอดภัย</p>
             </div>
-            <button
+            <button 
               onClick={() => setShowPasswordChange(!showPasswordChange)}
-              style={{
-                padding: '10px 20px',
-                background: showPasswordChange ? '#6b7280' : '#dc2626',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              style={{ ...primaryButtonStyle, background: showPasswordChange ? '#6b7280' : '#dc2626' }}
             >
               {showPasswordChange ? '✕ ยกเลิก' : '🔑 เปลี่ยนรหัสผ่าน'}
             </button>
           </div>
 
           {showPasswordChange && (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px',
-                marginTop: '24px',
-                paddingTop: '24px',
-                borderTop: '1px solid #f3f4f6',
-              }}
-            >
-              {/* รหัสผ่านปัจจุบัน */}
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: '#374151',
-                    marginBottom: '8px',
-                  }}
-                >
-                  รหัสผ่านปัจจุบัน
-                </label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="กรอกรหัสผ่านปัจจุบัน"
-                  style={{
-                    width: '100%',
-                    padding: '12px 14px',
-                    fontSize: '15px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '8px',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              {/* รหัสผ่านใหม่ */}
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: '#374151',
-                    marginBottom: '8px',
-                  }}
-                >
-                  รหัสผ่านใหม่
-                </label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="กรอกรหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)"
-                  style={{
-                    width: '100%',
-                    padding: '12px 14px',
-                    fontSize: '15px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '8px',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              {/* ยืนยันรหัสผ่านใหม่ */}
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: '#374151',
-                    marginBottom: '8px',
-                  }}
-                >
-                  ยืนยันรหัสผ่านใหม่
-                </label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
-                  style={{
-                    width: '100%',
-                    padding: '12px 14px',
-                    fontSize: '15px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '8px',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              {/* ปุ่มยืนยันเปลี่ยนรหัสผ่าน */}
-              <button
-                onClick={handleChangePassword}
-                style={{
-                  padding: '12px 24px',
-                  background: '#393939',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  marginTop: '8px',
-                }}
-              >
+            <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <InputGroup label="รหัสผ่านปัจจุบัน" value={currentPassword} onChange={setCurrentPassword} type="password" theme={theme} />
+              <InputGroup label="รหัสผ่านใหม่" value={newPassword} onChange={setNewPassword} type="password" theme={theme} />
+              <InputGroup label="ยืนยันรหัสผ่านใหม่" value={confirmPassword} onChange={setConfirmPassword} type="password" theme={theme} />
+              <button onClick={handleChangePassword} style={{ ...primaryButtonStyle, background: '#4f46e5', marginTop: '8px' }}>
                 ✓ ยืนยันเปลี่ยนรหัสผ่าน
               </button>
             </div>
@@ -511,3 +142,35 @@ export default function ProfilePage() {
     </main>
   )
 }
+
+/* ===== Sub-Components (StatCard & InputGroup เหมือนเดิม) ===== */
+function StatCard({ label, count, color, icon, theme }: any) {
+  return (
+    <div style={{ background: theme.card, padding: '24px', borderRadius: '16px', border: `1px solid ${theme.border}`, textAlign: 'center' }}>
+      <div style={{ fontSize: '24px', marginBottom: '8px' }}>{icon}</div>
+      <div style={{ fontSize: '32px', fontWeight: 800, color: color }}>{count}</div>
+      <div style={{ fontSize: '14px', color: theme.subText, fontWeight: 600 }}>{label}</div>
+    </div>
+  )
+}
+
+function InputGroup({ label, value, onChange, disabled, type, theme }: any) {
+  return (
+    <div style={{ width: '100%' }}>
+      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: theme.text, marginBottom: '8px' }}>{label}</label>
+      <input
+        type={type || 'text'}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        style={{ width: '100%', padding: '12px 14px', borderRadius: '8px', background: disabled ? theme.bg : theme.inputBg, color: theme.text, border: `1px solid ${theme.border}` }}
+      />
+    </div>
+  )
+}
+
+const cardStyle: React.CSSProperties = { borderRadius: '16px', padding: '32px', marginBottom: '24px' }
+const cardHeaderStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', paddingBottom: '20px' }
+const primaryButtonStyle: React.CSSProperties = { padding: '10px 20px', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }
+const secondaryButtonStyle: React.CSSProperties = { padding: '12px 24px', color: '#fff', textDecoration: 'none', borderRadius: '10px', fontWeight: 600 }
+const whiteButtonStyle: React.CSSProperties = { padding: '12px 24px', textDecoration: 'none', borderRadius: '10px', fontWeight: 600 }
