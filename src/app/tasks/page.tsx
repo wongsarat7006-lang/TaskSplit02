@@ -6,24 +6,22 @@ import { useTasks } from '../../context/TaskContext'
 import Link from 'next/link'
 
 export default function TaskBoardPage() {
-  const { tasks, moveTaskNext, isDarkMode, toggleDarkMode } = useTasks()
+  const { tasks, isDarkMode } = useTasks() // ดึงค่าธีมมาจาก Context
   const [searchTerm, setSearchTerm] = useState('')
 
-  // กำหนดธีมสี
+  // กำหนดธีมสีให้สัมพันธ์กับค่า isDarkMode
   const theme = {
     bg: isDarkMode ? '#121212' : '#f8fafc',
     card: isDarkMode ? '#1e1e1e' : '#ffffff',
     text: isDarkMode ? '#f3f4f6' : '#111827',
     border: isDarkMode ? '#333333' : '#e5e7eb',
-    inputBg: isDarkMode ? '#2d2d2d' : '#ffffff'
+    inputBg: isDarkMode ? '#2d2d2d' : '#ffffff',
+    subText: isDarkMode ? '#9ca3af' : '#64748b'
   }
 
   const filteredTasks = tasks.filter((task) => {
     const searchLower = searchTerm.toLowerCase()
-    return (
-      task.title.toLowerCase().includes(searchLower) ||
-      (task.assignee && task.assignee.toLowerCase().includes(searchLower))
-    )
+    return task.title.toLowerCase().includes(searchLower)
   })
 
   const todoTasks = filteredTasks.filter(t => t.status === 'todo')
@@ -34,69 +32,52 @@ export default function TaskBoardPage() {
     <main
       style={{
         minHeight: '100vh',
-        background: theme.bg, // ใช้สีตามธีม
+        background: theme.bg,
         padding: '40px 24px',
-        transition: 'background 0.3s ease',
+        transition: 'all 0.3s ease',
       }}
     >
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        {/* Header */}
+        
+        {/* Header - เอาปุ่มโปรไฟล์ออกแล้ว */}
         <header
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-end',
+            alignItems: 'center',
             marginBottom: '40px',
           }}
         >
           <div>
-            <h1 style={{ fontSize: '32px', fontWeight: 800, margin: 0, color: theme.text }}>
+            <h1 style={{ fontSize: '32px', fontWeight: 800, color: theme.text, marginBottom: '16px' }}>
               Task Board
             </h1>
             
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '20px' }}>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '12px', top: '10px', color: '#9ca3af' }}>🔍</span>
-                <input
-                  type="text"
-                  placeholder="ค้นหางาน..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    padding: '10px 10px 10px 40px',
-                    width: '300px',
-                    borderRadius: '10px',
-                    border: `1px solid ${theme.border}`,
-                    background: theme.inputBg,
-                    color: theme.text,
-                    outline: 'none',
-                  }}
-                />
-              </div>
-
-              {/* ปุ่มสลับโหมดมืด */}
-              <button 
-                onClick={toggleDarkMode}
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: '12px', top: '10px', color: '#9ca3af' }}>🔍</span>
+              <input
+                type="text"
+                placeholder="ค้นหางานของคุณ..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
-                  padding: '8px 12px',
-                  borderRadius: '10px',
+                  padding: '10px 10px 10px 40px',
+                  width: '350px',
+                  borderRadius: '12px',
                   border: `1px solid ${theme.border}`,
-                  background: theme.card,
-                  cursor: 'pointer',
-                  fontSize: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
+                  background: theme.inputBg,
+                  color: theme.text,
+                  outline: 'none',
+                  transition: '0.3s'
                 }}
-              >
-                {isDarkMode ? '☀️' : '🌙'}
-              </button>
+              />
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <Link href="/tasks/create" style={primaryButtonStyle}>+ สร้างงานใหม่</Link>
-            <Link href="/profile" style={{ ...whiteButtonStyle, background: theme.card, color: theme.text, border: `1px solid ${theme.border}` }}>โปรไฟล์</Link>
+          <div>
+            <Link href="/tasks/create" style={primaryButtonStyle}>
+              + สร้างงานใหม่
+            </Link>
           </div>
         </header>
 
@@ -104,29 +85,20 @@ export default function TaskBoardPage() {
         <section
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
             gap: '24px',
           }}
         >
-          {/* To Do Column */}
           <BoardColumn title="To Do" color="#64748b" count={todoTasks.length} theme={theme}>
-            {todoTasks.map(task => (
-              <TaskCard key={task.id} {...task} onNext={moveTaskNext} />
-            ))}
+            {todoTasks.map(task => <TaskCard key={task.id} task={task} />)}
           </BoardColumn>
 
-          {/* Doing Column */}
           <BoardColumn title="Doing" color="#f59e0b" count={doingTasks.length} theme={theme}>
-            {doingTasks.map(task => (
-              <TaskCard key={task.id} {...task} onNext={moveTaskNext} />
-            ))}
+            {doingTasks.map(task => <TaskCard key={task.id} task={task} />)}
           </BoardColumn>
 
-          {/* Done Column */}
           <BoardColumn title="Done" color="#22c55e" count={doneTasks.length} theme={theme}>
-            {doneTasks.map(task => (
-              <TaskCard key={task.id} {...task} onNext={moveTaskNext} />
-            ))}
+            {doneTasks.map(task => <TaskCard key={task.id} task={task} />)}
           </BoardColumn>
         </section>
       </div>
@@ -134,29 +106,37 @@ export default function TaskBoardPage() {
   )
 }
 
-/* === ส่วนของ Component ย่อย (คงความยาวเหมือนเดิม) === */
-
 function BoardColumn({ title, color, count, children, theme }: any) {
   return (
     <div style={{ 
       background: theme.card, 
-      borderRadius: '16px', 
-      padding: '20px', 
-      minHeight: '520px', 
+      borderRadius: '20px', 
+      padding: '24px', 
+      minHeight: '600px', 
       display: 'flex', 
       flexDirection: 'column', 
-      gap: '16px', 
+      gap: '20px', 
       border: `1px solid ${theme.border}`, 
-      borderTop: `6px solid ${color}`,
+      borderTop: `8px solid ${color}`,
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
       transition: 'all 0.3s ease'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: theme.text }}>{title}</h2>
-        <span style={{ background: color, color: '#fff', padding: '4px 12px', borderRadius: '999px', fontSize: '13px', fontWeight: 700 }}>{count}</span>
+        <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: theme.text }}>{title}</h2>
+        <span style={{ 
+          background: color, 
+          color: '#fff', 
+          padding: '4px 14px', 
+          borderRadius: '999px', 
+          fontSize: '14px', 
+          fontWeight: 800 
+        }}>{count}</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
         {count === 0 ? (
-          <div style={{ textAlign: 'center', marginTop: '80px', color: '#9ca3af', fontSize: '14px' }}>ไม่พบงานที่ค้นหา</div>
+          <div style={{ textAlign: 'center', marginTop: '100px', color: '#9ca3af', fontSize: '15px' }}>
+            ไม่มีรายการงาน
+          </div>
         ) : (
           children
         )}
@@ -166,19 +146,12 @@ function BoardColumn({ title, color, count, children, theme }: any) {
 }
 
 const primaryButtonStyle = {
-  padding: '12px 24px',
-  background: '#4f46e5',
+  padding: '14px 28px',
+  background: '#2563eb',
   color: '#fff',
   textDecoration: 'none',
-  borderRadius: '10px',
-  fontSize: '14px',
-  fontWeight: 600,
-}
-
-const whiteButtonStyle = {
-  padding: '12px 24px',
-  textDecoration: 'none',
-  borderRadius: '10px',
-  fontSize: '14px',
-  fontWeight: 600,
+  borderRadius: '12px',
+  fontSize: '15px',
+  fontWeight: 700,
+  boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.3)',
 }
