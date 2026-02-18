@@ -10,8 +10,11 @@ export default function Sidebar() {
 
   const sidebarWidth = isSidebarOpen ? '260px' : '80px'
   
-  // ปรับสี Sidebar ตามโหมด
-  const sidebarBg = isDarkMode ? '#1e1e1e' : '#1d43ea' 
+  // โทนสีใหม่: Deep Slate (น้ำเงินเข้มเกือบดำ)
+  const sidebarBg = isDarkMode ? '#0f172a' : '#1e293b' 
+  const activeBg = 'rgba(99, 102, 241, 0.2)' // Indigo โปร่งแสง
+  const activeText = '#818cf8' // Indigo สว่าง
+  const inactiveText = '#94a3b8'
 
   return (
     <aside style={{
@@ -21,118 +24,152 @@ export default function Sidebar() {
       position: 'fixed',
       left: 0,
       top: 0,
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1)',
       display: 'flex',
       flexDirection: 'column',
-      padding: '20px 10px',
+      padding: '24px 14px',
       zIndex: 1000,
       overflow: 'hidden',
-      boxShadow: '4px 0 10px rgba(0,0,0,0.1)'
+      boxShadow: '10px 0 30px rgba(0,0,0,0.2)'
     }}>
       
-      {/* 1. ส่วนโปรไฟล์ (กดไปหน้า Profile) */}
-      <Link href="/profile" style={{ textDecoration: 'none' }}>
+      {/* 1. Logo Section (Indigo Accent) */}
+      <Link href="/" style={{ textDecoration: 'none', marginBottom: '40px' }}>
         <div style={{
-          background: isDarkMode ? '#333' : '#e5e7eb',
-          borderRadius: '16px',
-          padding: isSidebarOpen ? '15px 10px' : '10px',
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
-          marginBottom: '24px',
-          cursor: 'pointer',
+          justifyContent: isSidebarOpen ? 'flex-start' : 'center',
+          gap: '15px',
+          padding: '5px'
         }}>
-          <div style={{ fontSize: '32px' }}>👤</div>
+          <div style={{
+            minWidth: '42px',
+            height: '42px',
+            background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '22px',
+            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)'
+          }}>
+            ⚡
+          </div>
           {isSidebarOpen && (
             <span style={{ 
-              color: isDarkMode ? '#fff' : '#111827', 
-              fontWeight: 700, 
-              fontSize: '14px', 
-              marginTop: '4px', 
-              whiteSpace: 'nowrap' 
+              color: '#fff', 
+              fontWeight: 800, 
+              fontSize: '20px', 
+              letterSpacing: '0.5px',
+              background: 'linear-gradient(to right, #fff, #94a3b8)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
             }}>
-              ชื่อ นายกอ กนไกร
+              TaskSplit
             </span>
           )}
         </div>
       </Link>
 
-      {/* 2. เมนูนำทาง */}
+      {/* 2. Navigation Menu */}
       <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <MenuLink icon="🏠" label="หน้าแรก" href="/" active={pathname === '/'} open={isSidebarOpen} />
-        <MenuLink icon="📊" label="Dashboard" href="/tasks" active={pathname === '/tasks'} open={isSidebarOpen} />
+        <MenuLink icon="🏠" label="หน้าแรก" href="/" active={pathname === '/'} open={isSidebarOpen} colors={{ activeBg, activeText, inactiveText }} />
+        <MenuLink icon="📊" label="Dashboard" href="/tasks" active={pathname === '/tasks'} open={isSidebarOpen} colors={{ activeBg, activeText, inactiveText }} />
+        <MenuLink icon="👤" label="โปรไฟล์" href="/profile" active={pathname === '/profile'} open={isSidebarOpen} colors={{ activeBg, activeText, inactiveText }} />
         
-        {/* --- ปุ่มสลับโหมดมืด (เพิ่มเข้ามาใหม่) --- */}
+        <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '15px 10px' }} />
+
+        {/* Dark Mode Toggle */}
         <button 
           onClick={toggleDarkMode}
           style={{
             display: 'flex',
             alignItems: 'center',
-            padding: '12px 15px',
+            justifyContent: isSidebarOpen ? 'flex-start' : 'center',
+            padding: '14px',
             borderRadius: '12px',
             border: 'none',
-            color: '#fff',
-            background: 'rgba(255, 255, 255, 0.1)',
+            color: isDarkMode ? '#fbbf24' : '#94a3b8',
+            background: isDarkMode ? 'rgba(251, 191, 36, 0.1)' : 'rgba(255,255,255,0.03)',
             gap: '15px',
             cursor: 'pointer',
-            textAlign: 'left',
+            transition: '0.3s',
             width: '100%'
           }}
         >
-          <span style={{ fontSize: '20px' }}>{isDarkMode ? '☀️' : '🌙'}</span>
-          {isSidebarOpen && <span style={{ fontWeight: 600 }}>{isDarkMode ? 'โหมดสว่าง' : 'โหมดมืด'}</span>}
+          <span style={{ fontSize: '18px' }}>{isDarkMode ? '☀️' : '🌙'}</span>
+          {isSidebarOpen && <span style={{ fontWeight: 600, fontSize: '14px' }}>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>}
         </button>
-
-        <MenuLink icon="⚙️" label="Profile" href="/profile" active={pathname === '/profile'} open={isSidebarOpen} />
       </nav>
 
-      {/* 3. ส่วนปุ่มด้านล่าง */}
+      {/* 3. Footer Actions */}
       <div style={{ 
         display: 'flex', 
         flexDirection: 'column', 
-        gap: '10px', 
-        paddingBottom: '30px', 
+        gap: '12px', 
+        paddingBottom: '20px',
         marginTop: 'auto' 
       }}>
         <button 
           onClick={toggleSidebar} 
-          style={{ ...btnStyle, background: 'rgba(255, 255, 255, 0.2)' }}
+          style={{ 
+            ...btnStyle, 
+            background: 'rgba(255,255,255,0.05)',
+            color: '#fff'
+          }}
         >
-          {isSidebarOpen ? '◀ ปิดเมนู' : '▶'}
+          {isSidebarOpen ? '◀ Collapse Menu' : '▶'}
         </button>
         
         <button 
-          style={{ ...btnStyle, background: '#ef4444', fontWeight: 700 }}
-          onClick={() => alert('ออกจากระบบ')}
+          style={{ 
+            ...btnStyle, 
+            background: 'rgba(239, 68, 68, 0.1)', 
+            color: '#ef4444', 
+            fontWeight: 700 
+          }}
+          onClick={() => alert('Signing out...')}
         >
-          {isSidebarOpen ? 'Logout' : '🚪'}
+          {isSidebarOpen ? 'Sign Out' : '🚪'}
         </button>
       </div>
     </aside>
   )
 }
 
-function MenuLink({ icon, label, href, active, open }: any) {
+function MenuLink({ icon, label, href, active, open, colors }: any) {
   return (
     <Link href={href} style={{
       display: 'flex',
       alignItems: 'center',
-      padding: '12px 15px',
+      justifyContent: open ? 'flex-start' : 'center',
+      padding: '14px',
       borderRadius: '12px',
       textDecoration: 'none',
-      color: '#fff',
-      background: active ? 'rgba(255, 255, 255, 0.3)' : 'transparent',
+      color: active ? colors.activeText : colors.inactiveText,
+      background: active ? colors.activeBg : 'transparent',
       gap: '15px',
-      whiteSpace: 'nowrap'
+      transition: 'all 0.2s ease',
+      position: 'relative',
+      overflow: 'hidden'
     }}>
-      <span style={{ fontSize: '20px' }}>{icon}</span>
-      {open && <span style={{ fontWeight: 600 }}>{label}</span>}
+      {/* ตัวบอกสถานะด้านข้างเมื่อ Active */}
+      {active && <div style={{ position: 'absolute', left: 0, top: '20%', bottom: '20%', width: '4px', background: colors.activeText, borderRadius: '0 4px 4px 0' }} />}
+      
+      <span style={{ fontSize: '20px', filter: active ? 'drop-shadow(0 0 5px rgba(129, 140, 248, 0.5))' : 'none' }}>{icon}</span>
+      {open && <span style={{ fontWeight: active ? 700 : 500, fontSize: '15px' }}>{label}</span>}
     </Link>
   )
 }
 
 const btnStyle: React.CSSProperties = {
-  border: 'none', color: '#fff', padding: '12px', borderRadius: '12px',
-  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-  fontSize: '14px'
+  border: 'none',
+  padding: '14px',
+  borderRadius: '12px',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '13px',
+  transition: 'all 0.2s ease',
 }

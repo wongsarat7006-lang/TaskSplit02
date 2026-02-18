@@ -1,18 +1,25 @@
 'use client'
 import React, { createContext, useContext, useState, useEffect } from 'react'
 
-interface Task {
+// 1. กำหนดโครงสร้างข้อมูล Task ให้รองรับทุกหน้า
+export interface Task {
   id: string
   title: string
+  description?: string
+  assignee?: string
+  dueDate?: string
   status: 'todo' | 'doing' | 'done'
+  priority: 'high' | 'medium' | 'low'
 }
 
 interface TaskContextType {
   tasks: Task[]
-  addTask: (title: string) => void
+  addTask: (taskData: Omit<Task, 'id' | 'status'>) => void
   moveTaskNext: (id: string) => void
   deleteTask: (id: string) => void
-  updateTask: (updatedTask: Task) => void // ฟังก์ชันแก้ไขงาน
+  updateTask: (updatedTask: Task) => void
+  // เพิ่ม Logic สำหรับการลากวาง
+  reorderTasks: (destination: any, source: any, draggableId: string) => void
   isSidebarOpen: boolean
   toggleSidebar: () => void
   isDarkMode: boolean
@@ -26,6 +33,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [isDarkMode, setIsDarkMode] = useState(false)
 
+  // โหลดข้อมูลจาก LocalStorage เมื่อเปิดแอป
   useEffect(() => {
     const savedTasks = localStorage.getItem('tasks')
     const savedMode = localStorage.getItem('isDarkMode')
@@ -33,17 +41,47 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     if (savedMode) setIsDarkMode(JSON.parse(savedMode))
   }, [])
 
+  // บันทึกข้อมูลเมื่อมีการเปลี่ยนแปลง
   useEffect(() => {
     localStorage.setItem('tasks', JSON.stringify(tasks))
     localStorage.setItem('isDarkMode', JSON.stringify(isDarkMode))
   }, [tasks, isDarkMode])
 
-  const addTask = (title: string) => {
-    const newTask: Task = { id: Date.now().toString(), title, status: 'todo' }
-    setTasks([...tasks, newTask])
+  // ฟังก์ชันเพิ่มงานใหม่ (รับเป็น Object)
+  const addTask = (taskData: Omit<Task, 'id' | 'status'>) => {
+    const newTask: Task = { 
+      id: Date.now().toString(), 
+      status: 'todo',
+      ...taskData 
+    }
+    setTasks(prev => [...prev, newTask])
   }
 
-  // ระบบค้นหาและอัปเดตงานตัวที่แก้ไข
+  // ฟังก์ชันสำหรับการลากและวาง (Drag & Drop Logic)
+  const reorderTasks = (destination: any, source: any, draggableId: string) => {
+    if (!destination) return
+
+    setTasks(prevTasks => {
+      const newTasks = Array.from(prevTasks)
+      // หา Task ที่กำลังถูกลาก
+      const taskIndex = newTasks.findIndex(t => t.id === draggableId)
+      if (taskIndex === -1) return prevTasks
+
+      const [removed] = newTasks.splice(taskIndex, 1)
+      
+      // อัปเดตสถานะใหม่ตาม DroppableId (todo, doing, done)
+      removed.status = destination.droppableId as 'todo' | 'doing' | 'done'
+
+      // แยกงานในคอลัมน์เป้าหมายออกมาจัดลำดับใหม่
+      const otherTasks = newTasks.filter(t => t.status !== destination.droppableId)
+      const targetColTasks = newTasks.filter(t => t.status === destination.droppableId)
+      
+      targetColTasks.splice(destination.index, 0, removed)
+
+      return [...otherTasks, ...targetColTasks]
+    })
+  }
+
   const updateTask = (updatedTask: Task) => {
     setTasks(tasks.map(task => task.id === updatedTask.id ? updatedTask : task))
   }
@@ -67,7 +105,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <TaskContext.Provider value={{ 
-      tasks, addTask, moveTaskNext, deleteTask, updateTask,
+      tasks, addTask, moveTaskNext, deleteTask, updateTask, reorderTasks,
       isSidebarOpen, toggleSidebar, isDarkMode, toggleDarkMode 
     }}>
       {children}
