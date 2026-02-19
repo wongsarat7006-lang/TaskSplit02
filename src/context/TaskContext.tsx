@@ -1,112 +1,84 @@
 'use client'
+
 import React, { createContext, useContext, useState, useEffect } from 'react'
 
-// 1. กำหนดโครงสร้างข้อมูล Task ให้รองรับทุกหน้า
 export interface Task {
   id: string
   title: string
-  description?: string
+  description?: string 
+  priority: 'high' | 'medium' | 'low'
+  status: 'todo' | 'doing' | 'done'
   assignee?: string
   dueDate?: string
-  status: 'todo' | 'doing' | 'done'
-  priority: 'high' | 'medium' | 'low'
 }
 
 interface TaskContextType {
   tasks: Task[]
-  addTask: (taskData: Omit<Task, 'id' | 'status'>) => void
-  moveTaskNext: (id: string) => void
-  deleteTask: (id: string) => void
-  updateTask: (updatedTask: Task) => void
-  // เพิ่ม Logic สำหรับการลากวาง
-  reorderTasks: (destination: any, source: any, draggableId: string) => void
-  isSidebarOpen: boolean
-  toggleSidebar: () => void
   isDarkMode: boolean
+  isSidebarOpen: boolean
   toggleDarkMode: () => void
+  toggleSidebar: () => void
+  addTask: (task: Omit<Task, 'id'>) => void
+  updateTask: (task: Task) => void
+  deleteTask: (id: string) => void
+  reorderTasks: (destination: any, source: any, draggableId: string) => void
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined)
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([])
+  const [isDarkMode, setIsDarkMode] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
 
-  // โหลดข้อมูลจาก LocalStorage เมื่อเปิดแอป
   useEffect(() => {
-    const savedTasks = localStorage.getItem('tasks')
-    const savedMode = localStorage.getItem('isDarkMode')
+    const savedTasks = localStorage.getItem('tasksplit_storage')
+    const savedTheme = localStorage.getItem('tasksplit_theme')
     if (savedTasks) setTasks(JSON.parse(savedTasks))
-    if (savedMode) setIsDarkMode(JSON.parse(savedMode))
+    if (savedTheme) setIsDarkMode(JSON.parse(savedTheme))
+    setIsLoaded(true)
   }, [])
 
-  // บันทึกข้อมูลเมื่อมีการเปลี่ยนแปลง
   useEffect(() => {
-    localStorage.setItem('tasks', JSON.stringify(tasks))
-    localStorage.setItem('isDarkMode', JSON.stringify(isDarkMode))
-  }, [tasks, isDarkMode])
-
-  // ฟังก์ชันเพิ่มงานใหม่ (รับเป็น Object)
-  const addTask = (taskData: Omit<Task, 'id' | 'status'>) => {
-    const newTask: Task = { 
-      id: Date.now().toString(), 
-      status: 'todo',
-      ...taskData 
+    if (isLoaded) {
+      localStorage.setItem('tasksplit_storage', JSON.stringify(tasks))
+      localStorage.setItem('tasksplit_theme', JSON.stringify(isDarkMode))
     }
-    setTasks(prev => [...prev, newTask])
-  }
+  }, [tasks, isDarkMode, isLoaded])
 
-  // ฟังก์ชันสำหรับการลากและวาง (Drag & Drop Logic)
-  const reorderTasks = (destination: any, source: any, draggableId: string) => {
-    if (!destination) return
+  const toggleDarkMode = () => setIsDarkMode(!isDarkMode)
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen)
 
-    setTasks(prevTasks => {
-      const newTasks = Array.from(prevTasks)
-      // หา Task ที่กำลังถูกลาก
-      const taskIndex = newTasks.findIndex(t => t.id === draggableId)
-      if (taskIndex === -1) return prevTasks
-
-      const [removed] = newTasks.splice(taskIndex, 1)
-      
-      // อัปเดตสถานะใหม่ตาม DroppableId (todo, doing, done)
-      removed.status = destination.droppableId as 'todo' | 'doing' | 'done'
-
-      // แยกงานในคอลัมน์เป้าหมายออกมาจัดลำดับใหม่
-      const otherTasks = newTasks.filter(t => t.status !== destination.droppableId)
-      const targetColTasks = newTasks.filter(t => t.status === destination.droppableId)
-      
-      targetColTasks.splice(destination.index, 0, removed)
-
-      return [...otherTasks, ...targetColTasks]
-    })
+  const addTask = (taskData: Omit<Task, 'id'>) => {
+    const newTask: Task = { ...taskData, id: Math.random().toString(36).substring(2, 11) }
+    setTasks([...tasks, newTask])
   }
 
   const updateTask = (updatedTask: Task) => {
-    setTasks(tasks.map(task => task.id === updatedTask.id ? updatedTask : task))
-  }
-
-  const moveTaskNext = (id: string) => {
-    setTasks(tasks.map(task => {
-      if (task.id === id) {
-        if (task.status === 'todo') return { ...task, status: 'doing' }
-        if (task.status === 'doing') return { ...task, status: 'done' }
-      }
-      return task
-    }))
+    setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t))
   }
 
   const deleteTask = (id: string) => {
-    setTasks(tasks.filter(task => task.id !== id))
+    setTasks(tasks.filter(t => t.id !== id))
   }
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen)
-  const toggleDarkMode = () => setIsDarkMode(!isDarkMode)
+  const reorderTasks = (destination: any, source: any, draggableId: string) => {
+    if (!destination) return
+    const newTasks = Array.from(tasks)
+    const taskIndex = newTasks.findIndex(t => t.id === draggableId)
+    const [removed] = newTasks.splice(taskIndex, 1)
+    removed.status = destination.droppableId
+    const tasksInDest = newTasks.filter(t => t.status === destination.droppableId)
+    const otherTasks = newTasks.filter(t => t.status !== destination.droppableId)
+    tasksInDest.splice(destination.index, 0, removed)
+    setTasks([...otherTasks, ...tasksInDest])
+  }
 
   return (
     <TaskContext.Provider value={{ 
-      tasks, addTask, moveTaskNext, deleteTask, updateTask, reorderTasks,
-      isSidebarOpen, toggleSidebar, isDarkMode, toggleDarkMode 
+      tasks, isDarkMode, isSidebarOpen, toggleDarkMode, toggleSidebar,
+      addTask, updateTask, deleteTask, reorderTasks 
     }}>
       {children}
     </TaskContext.Provider>
