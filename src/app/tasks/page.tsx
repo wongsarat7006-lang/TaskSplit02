@@ -1,15 +1,32 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTasks } from '../../context/TaskContext'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 
 export default function TasksPage() {
+  const router = useRouter()
+
   const { tasks, reorderTasks, deleteTask, isDarkMode } = useTasks()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterPriority, setFilterPriority] = useState('all')
   const [hasMounted, setHasMounted] = useState(false)
+
+  // 🔐 LOGIN GUARD (ทำงานแน่นอน)
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+
+    if (!token) {
+      router.replace("/login")
+      return
+    }
+
+    setHasMounted(true)
+  }, [router])
+
+  if (!hasMounted) return null
 
   const t = {
     bg:        isDarkMode ? '#0a0a0a' : '#fafaf8',
@@ -29,8 +46,6 @@ export default function TasksPage() {
   const thaiFont = "'Sarabun', sans-serif"
   const engFont  = "'Bebas Neue', 'Impact', sans-serif"
   const monoFont = "'Courier New', monospace"
-
-  useEffect(() => { setHasMounted(true) }, [])
 
   const totalTasks = tasks?.length || 0
   const doneTasks  = tasks?.filter(t => t.status === 'done').length || 0
@@ -56,7 +71,6 @@ export default function TasksPage() {
     { id: 'done',  label: 'DONE',        title: 'เสร็จสิ้น',  count: doneTasks },
   ]
 
-  if (!hasMounted) return null
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>

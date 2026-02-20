@@ -2,11 +2,14 @@
 
 import { useTasks } from '../../context/TaskContext'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+
 
 export default function Sidebar() {
   const { isSidebarOpen, toggleSidebar, isDarkMode, toggleDarkMode } = useTasks()
   const pathname = usePathname()
+  const router = useRouter()
+
 
   const sidebarWidth = isSidebarOpen ? '260px' : '72px'
 
@@ -108,7 +111,11 @@ export default function Sidebar() {
           </button>
 
           {/* Sign Out — เด่นชัด มีสีพื้นหลัง */}
-          <button onClick={() => alert('Signing out...')} style={{
+          <button
+          onClick={() => {
+            localStorage.removeItem('token')
+            router.push('/login')
+          }} style={{
             border: 'none',
             padding: '12px 14px', borderRadius: '6px', cursor: 'pointer',
             display: 'flex', alignItems: 'center',
