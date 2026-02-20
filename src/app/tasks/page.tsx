@@ -26,7 +26,6 @@ export default function TasksPage() {
     setHasMounted(true)
   }, [router])
 
-  if (!hasMounted) return null
 
   const t = {
     bg:        isDarkMode ? '#0a0a0a' : '#fafaf8',
@@ -71,7 +70,8 @@ export default function TasksPage() {
     { id: 'done',  label: 'DONE',        title: 'เสร็จสิ้น',  count: doneTasks },
   ]
 
-
+ if (!hasMounted) return null
+ 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <main style={{ minHeight: '100vh', background: t.bg, color: t.text, fontFamily: thaiFont, position: 'relative', overflow: 'hidden', transition: 'background 0.3s ease' }}>
