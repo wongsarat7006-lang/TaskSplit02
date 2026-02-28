@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../lib/supabaseClient' // ปรับให้ตรงกับที่ตั้งไว้
 
 export interface Task {
   id: string
@@ -14,6 +14,7 @@ export interface Task {
   category_id?: string
   categories?: { name: string; color: string }
   created_at?: string
+  user_id?: string // เพิ่มเพื่อความปลอดภัย
 }
 
 export interface Category {
@@ -36,7 +37,6 @@ interface TaskContextType {
   reorderTasks: (destination: any, source: any, draggableId: string) => Promise<void>
   fetchComments: (taskId: string) => Promise<any[]>
   addComment: (taskId: string, content: string, author: string) => Promise<{ data: any, error: any }>
-  // ✅ เพิ่มฟังก์ชันเข้า Type
   getTaskTimeStatus: (dueDate: string | undefined) => { label: string; color: string }
 }
 
@@ -52,7 +52,11 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initData = async () => {
       setLoading(true)
-      await Promise.all([fetchTasks(), fetchCategories()])
+      // เช็คก่อนว่ามี Session ไหม ถ้าไม่มีก็ไม่ต้องดึงข้อมูล
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        await Promise.all([fetchTasks(), fetchCategories()])
+      }
       setLoading(false)
     }
     initData()
@@ -73,7 +77,6 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     if (data) setCategories(data as Category[])
   }
 
-  // ✅ เพิ่ม Logic คำนวณเวลา
   const getTaskTimeStatus = (dueDate: string | undefined) => {
     if (!dueDate) return { label: 'NO DEADLINE', color: '#888' };
     const now = new Date();
@@ -145,7 +148,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     <TaskContext.Provider value={{ 
       tasks, categories, isDarkMode, isSidebarOpen, loading,
       toggleDarkMode, toggleSidebar, addTask, updateTask, deleteTask, reorderTasks,
-      fetchComments, addComment, getTaskTimeStatus // ✅ ส่งฟังก์ชันออกไป
+      fetchComments, addComment, getTaskTimeStatus
     }}>
       {children}
     </TaskContext.Provider>

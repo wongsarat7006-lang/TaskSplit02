@@ -3,6 +3,7 @@
 import { useTasks } from '../../context/TaskContext'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import Cookies from 'js-cookie' // นำเข้า Cookies เพื่อจัดการ Session
 
 export default function Sidebar() {
   const { isSidebarOpen, toggleSidebar, isDarkMode, toggleDarkMode } = useTasks()
@@ -11,7 +12,15 @@ export default function Sidebar() {
 
   const sidebarWidth = isSidebarOpen ? '260px' : '72px'
 
-  // จัดการชุดสีให้รองรับ Dark Mode ทั้งระบบ
+  // ฟังก์ชัน Logout แบบมืออาชีพ
+  const handleLogout = () => {
+    if (confirm("คุณต้องการออกจากระบบใช่หรือไม่?")) {
+      Cookies.remove('token') // ลบ Token จาก Cookies
+      router.push('/login')   // ดีดไปหน้า Login
+      router.refresh()        // รีเฟรชสถานะ
+    }
+  }
+
   const t = {
     bg:        isDarkMode ? '#0a0a0a' : '#ffffff',
     border:    isDarkMode ? 'rgba(255,107,0,0.15)' : 'rgba(255,107,0,0.1)',
@@ -39,13 +48,10 @@ export default function Sidebar() {
       borderRight: `1px solid ${t.border}`,
       boxShadow: t.shadow,
     }}>
-
-      {/* Grid texture */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: `linear-gradient(${t.grid} 1px, transparent 1px), linear-gradient(90deg, ${t.grid} 1px, transparent 1px)`, backgroundSize: '40px 40px', zIndex: 0 }} />
       
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '24px 12px 16px' }}>
 
-        {/* ── Logo ── */}
         <Link href="/" style={{ textDecoration: 'none', marginBottom: '36px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: isSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '4px' }}>
             <div style={{ minWidth: '40px', height: '40px', background: '#ff6b00', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0, boxShadow: '0 0 20px rgba(255,107,0,0.35)' }}>⚡</div>
@@ -57,16 +63,14 @@ export default function Sidebar() {
           </div>
         </Link>
 
-        {/* ── Menu ── */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <NavItem href="/"      icon="⊞" label="หน้าแรก"    active={pathname === '/'}    open={isSidebarOpen} t={t} thaiFont={thaiFont} isDarkMode={isDarkMode} />
-          <NavItem href="/tasks"   icon="▦" label="Task Board" active={pathname === '/tasks'}   open={isSidebarOpen} t={t} thaiFont={thaiFont} isDarkMode={isDarkMode} />
+          <NavItem href="/"    icon="⊞" label="หน้าแรก"    active={pathname === '/'}    open={isSidebarOpen} t={t} thaiFont={thaiFont} isDarkMode={isDarkMode} />
+          <NavItem href="/tasks"   icon="▦" label="Task Board" active={pathname === '/tasks'}  open={isSidebarOpen} t={t} thaiFont={thaiFont} isDarkMode={isDarkMode} />
           <NavItem href="/profile" icon="◉" label="โปรไฟล์"    active={pathname === '/profile'}  open={isSidebarOpen} t={t} thaiFont={thaiFont} isDarkMode={isDarkMode} />
         </nav>
 
         <div style={{ height: '1px', background: `linear-gradient(90deg, ${t.border}, transparent)`, margin: '16px 8px' }} />
 
-        {/* ── Dark Mode Toggle ── */}
         <button onClick={toggleDarkMode} style={{
           display: 'flex', alignItems: 'center',
           justifyContent: isSidebarOpen ? 'flex-start' : 'center',
@@ -84,7 +88,6 @@ export default function Sidebar() {
 
         <div style={{ flex: 1 }} />
 
-        {/* ── Footer actions ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <button onClick={toggleSidebar} style={{
             border: `1px solid ${t.border}`, padding: '11px 14px', borderRadius: '6px', cursor: 'pointer',
@@ -92,22 +95,16 @@ export default function Sidebar() {
             justifyContent: isSidebarOpen ? 'flex-start' : 'center',
             gap: '10px', background: 'transparent', color: t.subText,
             transition: 'all 0.2s ease', width: '100%',
-          }}
-            onMouseEnter={e => (e.currentTarget.style.borderColor = t.borderStr)}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = t.border)}
-          >
+          }}>
             <span style={{ fontSize: '12px' }}>{isSidebarOpen ? '◀' : '▶'}</span>
             {isSidebarOpen && <span style={{ fontFamily: monoFont, fontSize: '11px' }}>COLLAPSE</span>}
           </button>
 
-          <button onClick={() => { localStorage.removeItem('token'); router.push('/login'); }} style={{
+          <button onClick={handleLogout} style={{
             border: 'none', padding: '12px 14px', borderRadius: '6px', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: isSidebarOpen ? 'flex-start' : 'center',
             gap: '10px', background: 'rgba(239,68,68,0.1)', color: '#f87171', transition: 'all 0.2s ease', width: '100%',
-          }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.2)'; (e.currentTarget as HTMLElement).style.color = '#ef4444' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)'; (e.currentTarget as HTMLElement).style.color = '#f87171' }}
-          >
+          }}>
             <span style={{ fontSize: '15px' }}>🚪</span>
             {isSidebarOpen && <span style={{ fontFamily: thaiFont, fontSize: '14px', fontWeight: 600 }}>ออกจากระบบ</span>}
           </button>
@@ -124,27 +121,13 @@ function NavItem({ icon, label, href, active, open, t, thaiFont, isDarkMode }: a
       justifyContent: open ? 'flex-start' : 'center',
       padding: '12px 14px', borderRadius: '6px',
       textDecoration: 'none',
-      // แก้ไข: ใช้สีจากตัวแปร t ที่เปลี่ยนตาม theme
       color: active ? (isDarkMode ? '#ff6b00' : '#111110') : t.subText,
       background: active ? t.activeNav : 'transparent',
       border: `1px solid ${active ? (isDarkMode ? 'rgba(255,107,0,0.3)' : 'rgba(0,0,0,0.05)') : 'transparent'}`,
       gap: '12px', transition: 'all 0.2s ease',
       boxShadow: active && !isDarkMode ? '0 4px 12px rgba(0,0,0,0.03)' : 'none',
       whiteSpace: 'nowrap',
-    }}
-      onMouseEnter={e => {
-        if (!active) {
-          (e.currentTarget as HTMLElement).style.background = isDarkMode ? 'rgba(255,107,0,0.08)' : 'rgba(0,0,0,0.03)'
-          ;(e.currentTarget as HTMLElement).style.color = isDarkMode ? '#ff6b00' : '#111110'
-        }
-      }}
-      onMouseLeave={e => {
-        if (!active) {
-          (e.currentTarget as HTMLElement).style.background = 'transparent'
-          ;(e.currentTarget as HTMLElement).style.color = t.subText
-        }
-      }}
-    >
+    }}>
       <span style={{ fontSize: '18px', fontWeight: 900 }}>{icon}</span>
       {open && <span style={{ fontFamily: thaiFont, fontSize: '14px', fontWeight: active ? 700 : 500 }}>{label}</span>}
     </Link>

@@ -1,0 +1,34 @@
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // 1. ตรวจสอบคุกกี้ที่ขึ้นต้นด้วย 'sb-' และมีคำว่า 'auth-token' (Supabase ระบุตัวตนด้วยสิ่งนี้)
+  const allCookies = request.cookies.getAll();
+  const hasSession = allCookies.some(
+    (cookie) => cookie.name.startsWith('sb-') && cookie.name.endsWith('-auth-token')
+  );
+
+  // 2. ถ้าเข้าหน้าแรก "/" -> ไปที่ /tasks หรือ /login ตามสถานะ
+  if (pathname === '/') {
+    return NextResponse.redirect(new URL(hasSession ? '/tasks' : '/login', request.url));
+  }
+
+  // 3. ป้องกันหน้า /tasks หากไม่มี Session
+  if (pathname.startsWith('/tasks') && !hasSession) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  // 4. ถ้ามี Session แล้วแต่ยังอยู่ที่ /login หรือ /signup -> ไป /tasks
+  if ((pathname === '/login' || pathname === '/signup') && hasSession) {
+    return NextResponse.redirect(new URL('/tasks', request.url));
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  // ไม่รวมโฟลเดอร์ static และ _next เพื่อความเร็ว
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+};
