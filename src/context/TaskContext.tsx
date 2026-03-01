@@ -1,8 +1,9 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { supabase } from '../lib/supabaseClient' // ปรับให้ตรงกับที่ตั้งไว้
+import { supabase } from '../lib/supabaseClient'
 
+// --- Interfaces ---
 export interface Task {
   id: string
   title: string
@@ -14,7 +15,10 @@ export interface Task {
   category_id?: string
   categories?: { name: string; color: string }
   created_at?: string
-  user_id?: string // เพิ่มเพื่อความปลอดภัย
+  user_id?: string
+  authorEmail?: string 
+  max_assignees?: number 
+  current_people?: number 
 }
 
 export interface Category {
@@ -23,17 +27,27 @@ export interface Category {
   color: string
 }
 
+export interface Profile {
+  id: string
+  full_name?: string
+  email?: string
+  avatar_url?: string
+}
+
 interface TaskContextType {
   tasks: Task[]
   categories: Category[]
+  allUsers: Profile[]
   isDarkMode: boolean
   isSidebarOpen: boolean
   loading: boolean
+  currentUser: any 
   toggleDarkMode: () => void
   toggleSidebar: () => void
-  addTask: (task: Omit<Task, 'id' | 'created_at' | 'categories'>) => Promise<void>
+  addTask: (taskData: any) => Promise<void>
   updateTask: (task: Task) => Promise<void>
   deleteTask: (id: string) => Promise<void>
+  joinTask: (taskId: string) => Promise<void>
   reorderTasks: (destination: any, source: any, draggableId: string) => Promise<void>
   fetchComments: (taskId: string) => Promise<any[]>
   addComment: (taskId: string, content: string, author: string) => Promise<{ data: any, error: any }>
@@ -45,30 +59,45 @@ const TaskContext = createContext<TaskContextType | undefined>(undefined)
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [allUsers, setAllUsers] = useState<Profile[]>([])
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [loading, setLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
+  // --- Initialization ---
   useEffect(() => {
     const initData = async () => {
       setLoading(true)
-      // เช็คก่อนว่ามี Session ไหม ถ้าไม่มีก็ไม่ต้องดึงข้อมูล
       const { data: { session } } = await supabase.auth.getSession()
+      
       if (session) {
-        await Promise.all([fetchTasks(), fetchCategories()])
+        setCurrentUser(session.user)
+        await Promise.all([fetchTasks(), fetchCategories(), fetchAllUsers()])
       }
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setCurrentUser(session?.user ?? null)
+        if (session) fetchAllUsers()
+      })
+
       setLoading(false)
+      return () => subscription.unsubscribe()
     }
     initData()
+
     const savedTheme = localStorage.getItem('tasksplit_theme')
     if (savedTheme) setIsDarkMode(JSON.parse(savedTheme))
   }, [])
 
+  // --- Fetch Functions ---
+  const fetchAllUsers = async () => {
+    const { data, error } = await supabase.from('profiles').select('id, full_name, email, avatar_url')
+    if (!error && data) setAllUsers(data as Profile[])
+  }
+
   const fetchTasks = async () => {
-    const { data } = await supabase
-      .from('tasks')
-      .select('*, categories (name, color)')
-      .order('created_at', { ascending: false })
+    const { data } = await supabase.from('tasks').select('*, categories (name, color)').order('created_at', { ascending: false })
     if (data) setTasks(data as Task[])
   }
 
@@ -77,42 +106,20 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     if (data) setCategories(data as Category[])
   }
 
-  const getTaskTimeStatus = (dueDate: string | undefined) => {
-    if (!dueDate) return { label: 'NO DEADLINE', color: '#888' };
-    const now = new Date();
-    const deadline = new Date(dueDate);
-    const diffInMs = deadline.getTime() - now.getTime();
-    const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+  // --- Task Actions ---
+  const addTask = async (taskData: any) => {
+    const catId = taskData.category_id || (categories.length > 0 ? categories[0].id : null)
+    
+    const payload = {
+      ...taskData,
+      category_id: catId,
+      user_id: currentUser?.id,
+      authorEmail: currentUser?.email,
+      current_people: 1,
+      status: 'todo'
+    }
 
-    if (diffInMs < 0) return { label: 'OVERDUE', color: '#ff4d4d' };
-    if (diffInDays <= 1) return { label: 'DUE SOON', color: '#ffaa44' };
-    return { label: 'ON TRACK', color: '#44ffaa' };
-  };
-
-  const saveLog = async (logData: { task_id: string; action: string; field?: string; old_value?: string; new_value?: string; }) => {
-    await supabase.from('task_logs').insert([logData])
-  }
-
-  const fetchComments = async (taskId: string) => {
-    const { data } = await supabase.from('task_comments').select('*').eq('task_id', taskId).order('created_at', { ascending: true });
-    return data || [];
-  };
-
-  const addComment = async (taskId: string, content: string, author: string) => {
-    const { data, error } = await supabase.from('task_comments').insert([{ task_id: taskId, content, author_name: author }]).select().single();
-    return { data, error };
-  };
-
-  const toggleDarkMode = () => {
-    const newMode = !isDarkMode
-    setIsDarkMode(newMode)
-    localStorage.setItem('tasksplit_theme', JSON.stringify(newMode))
-  }
-
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen)
-
-  const addTask = async (taskData: Omit<Task, 'id' | 'created_at' | 'categories'>) => {
-    const { data, error } = await supabase.from('tasks').insert([taskData]).select('*, categories (name, color)').single()
+    const { data, error } = await supabase.from('tasks').insert([payload]).select('*, categories (name, color)').single()
     if (!error && data) {
       setTasks([data, ...tasks])
       await saveLog({ task_id: data.id, action: 'created', new_value: data.title })
@@ -120,10 +127,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   }
 
   const updateTask = async (updatedTask: Task) => {
-    const oldTask = tasks.find(t => t.id === updatedTask.id)
     const { categories: _, ...cleanTask } = updatedTask as any 
     const { data, error } = await supabase.from('tasks').update(cleanTask).eq('id', updatedTask.id).select('*, categories (name, color)').single()
-    if (!error && data && oldTask) {
+    if (!error && data) {
       setTasks(tasks.map(t => t.id === updatedTask.id ? data : t))
     }
   }
@@ -133,21 +139,77 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     if (!error) setTasks(tasks.filter(t => t.id !== id))
   }
 
-  const reorderTasks = async (destination: any, source: any, draggableId: string) => {
-    if (!destination || destination.droppableId === source.droppableId) return
-    const newStatus = destination.droppableId
-    const oldStatus = source.droppableId
-    const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', draggableId)
+  const joinTask = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId)
+    if (!task) return
+    
+    if ((task.current_people || 0) >= (task.max_assignees || 1)) {
+      alert("ขออภัย! สมาชิกในทีมเต็มแล้ว")
+      return
+    }
+
+    const newCount = (task.current_people || 0) + 1
+    const { error } = await supabase.from('tasks').update({ current_people: newCount }).eq('id', taskId)
+
     if (!error) {
-      await saveLog({ task_id: draggableId, action: 'moved', field: 'status', old_value: oldStatus, new_value: newStatus })
-      setTasks(tasks.map(t => t.id === draggableId ? { ...t, status: newStatus } : t))
+      setTasks(tasks.map(t => t.id === taskId ? { ...t, current_people: newCount } : t))
+      await saveLog({ task_id: taskId, action: 'joined', new_value: `User joined. Total: ${newCount}` })
     }
   }
 
+  // --- Drag & Drop (Reorder) ---
+  const reorderTasks = async (destination: any, source: any, draggableId: string) => {
+    if (!destination) return
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return
+
+    const newStatus = destination.droppableId as 'todo' | 'doing' | 'done'
+    const updatedTasks = Array.from(tasks)
+    const taskIndex = updatedTasks.findIndex(t => t.id === draggableId)
+    
+    if (taskIndex !== -1) {
+      updatedTasks[taskIndex].status = newStatus
+      setTasks(updatedTasks)
+      
+      const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', draggableId)
+      if (error) fetchTasks() // Revert if failed
+    }
+  }
+
+  // --- Comments & Logs ---
+  const fetchComments = async (taskId: string) => {
+    const { data } = await supabase.from('task_comments').select('*').eq('task_id', taskId).order('created_at', { ascending: true })
+    return data || []
+  }
+
+  const addComment = async (taskId: string, content: string, author: string) => {
+    return await supabase.from('task_comments').insert([{ task_id: taskId, content, author_name: author }]).select().single()
+  }
+
+  const saveLog = async (logData: any) => {
+    await supabase.from('task_logs').insert([logData])
+  }
+
+  // --- Helpers ---
+  const getTaskTimeStatus = (dueDate: string | undefined) => {
+    if (!dueDate) return { label: 'NO DEADLINE', color: '#888' }
+    const now = new Date(); const deadline = new Date(dueDate)
+    const diff = deadline.getTime() - now.getTime()
+    if (diff < 0) return { label: 'OVERDUE', color: '#ff4d4d' }
+    if (diff / (1000*60*60*24) <= 1) return { label: 'DUE SOON', color: '#ffaa44' }
+    return { label: 'ON TRACK', color: '#44ffaa' }
+  }
+
+  const toggleDarkMode = () => {
+    const newMode = !isDarkMode
+    setIsDarkMode(newMode)
+    localStorage.setItem('tasksplit_theme', JSON.stringify(newMode))
+  }
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen)
+
   return (
     <TaskContext.Provider value={{ 
-      tasks, categories, isDarkMode, isSidebarOpen, loading,
-      toggleDarkMode, toggleSidebar, addTask, updateTask, deleteTask, reorderTasks,
+      tasks, categories, allUsers, isDarkMode, isSidebarOpen, loading, currentUser, 
+      toggleDarkMode, toggleSidebar, addTask, updateTask, deleteTask, joinTask, reorderTasks,
       fetchComments, addComment, getTaskTimeStatus
     }}>
       {children}

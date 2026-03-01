@@ -5,179 +5,176 @@ import { useRouter } from 'next/navigation'
 import { useTasks } from '../../../context/TaskContext'
 
 export default function CreateTaskPage() {
-  // ✅ ดึงข้อมูลจาก Context
-  const { addTask, categories, isDarkMode } = useTasks()
+  const { addTask, allUsers } = useTasks() 
   const router = useRouter()
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    priority: 'medium' as 'high' | 'medium' | 'low',
-    status: 'todo' as 'todo' | 'doing' | 'done',
-    assignee: '',
+    assignee: '', // ✅ หัวหน้างาน (ผู้รับผิดชอบหลัก)
+    team_members: [] as string[], // ✅ รายชื่อสมาชิกในทีมเพิ่มเติม
+    max_assignees: 1, 
     dueDate: '',
-    category_id: '' 
   })
   
   const [focusedField, setFocusedField] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // ธีมสี (ส้ม-ดำ)
   const t = {
-    bg:         isDarkMode ? '#0a0a0a' : '#fafaf8',
-    card:       isDarkMode ? '#0f0f0f' : '#ffffff',
-    text:       isDarkMode ? '#f0ede8' : '#111110',
-    subText:    isDarkMode ? '#5a5a52' : '#8a8a82',
-    border:     isDarkMode ? 'rgba(255,107,0,0.15)' : 'rgba(255,107,0,0.2)',
-    borderStr:  isDarkMode ? 'rgba(255,107,0,0.35)' : 'rgba(255,107,0,0.45)',
-    inputBg:    isDarkMode ? '#0a0a0a' : '#fafaf8',
-    grid:       isDarkMode ? 'rgba(255,107,0,0.035)' : 'rgba(255,107,0,0.06)',
-  }
-
-  const thaiFont = "'Sarabun', sans-serif"
-  const engFont  = "'Bebas Neue', 'Impact', sans-serif"
-  const monoFont = "'Courier New', monospace"
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.title.trim()) return alert('กรุณาใส่หัวข้องาน')
-    
-    setIsSubmitting(true)
-    try {
-      await addTask({
-        title: formData.title,
-        description: formData.description,
-        priority: formData.priority,
-        status: formData.status,
-        assignee: formData.assignee,
-        dueDate: formData.dueDate,
-        category_id: formData.category_id || undefined 
-      })
-      router.push('/tasks') 
-    } catch (error) {
-      console.error("Error creating task:", error)
-      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const priorityConfig = {
-    high:   { color: '#ef4444', label: 'สูง (High)' },
-    medium: { color: '#ffaa44', label: 'ปกติ (Medium)' },
-    low:    { color: '#22c55e', label: 'ต่ำ (Low)' },
+    bg: '#0a0a0a',
+    card: '#0f0f0f',
+    accent: '#ff6b00',
+    text: '#f0ede8',
+    subText: '#6a6a62',
+    border: 'rgba(255, 107, 0, 0.2)',
+    inputBg: '#0d0d0d'
   }
 
   const fieldStyle = (name: string) => ({
-    width: '100%', padding: '13px 16px',
+    width: '100%', 
+    padding: '12px 16px',
     background: t.inputBg,
-    border: `1px solid ${focusedField === name ? 'rgba(255,107,0,0.6)' : t.border}`,
-    borderRadius: '6px', outline: 'none',
-    fontFamily: thaiFont, fontSize: '14px', color: t.text,
-    boxSizing: 'border-box' as const,
+    border: `1px solid ${focusedField === name ? t.accent : t.border}`,
+    borderRadius: '8px', 
+    outline: 'none',
+    fontFamily: "'Sarabun', sans-serif", 
+    fontSize: '14px', 
+    color: t.text,
     transition: 'all 0.2s ease',
   })
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formData.title) return alert('กรุณาระบุหัวข้องาน')
+    await addTask(formData)
+    router.push('/')
+  }
+
   return (
-    <main style={{ minHeight: '100vh', background: t.bg, color: t.text, fontFamily: thaiFont, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px 24px' }}>
-      
-      {/* Background Decor */}
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', backgroundImage: `linear-gradient(${t.grid} 1px, transparent 1px), linear-gradient(90deg, ${t.grid} 1px, transparent 1px)`, backgroundSize: '60px 60px' }} />
+    <main style={{ minHeight: '100vh', background: t.bg, color: t.text, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div style={{ width: '100%', maxWidth: '550px', background: t.card, border: `1px solid ${t.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+        <div style={{ height: '3px', background: `linear-gradient(90deg, transparent, ${t.accent}, transparent)` }} />
 
-      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '600px', background: t.card, border: `1px solid ${t.border}`, borderRadius: '10px', overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-        
-        <div style={{ height: '3px', background: 'linear-gradient(90deg, #ff6b00, #ff9944, transparent)' }} />
+        <div style={{ padding: '40px' }}>
+          <header style={{ marginBottom: '30px' }}>
+            <div style={{ fontFamily: 'monospace', fontSize: '10px', color: t.accent, letterSpacing: '3px' }}>// ASSIGNMENT CONFIG</div>
+            <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '48px', margin: '5px 0 0 0' }}>NEW <span style={{ color: t.accent }}>TASK</span></h1>
+          </header>
 
-        <div style={{ padding: '40px 44px' }}>
-          <div style={{ marginBottom: '32px' }}>
-            <div style={{ fontFamily: monoFont, fontSize: '11px', color: '#ff6b00', letterSpacing: '0.2em', marginBottom: '10px' }}>// CREATE NEW TASK</div>
-            <h1 style={{ fontFamily: engFont, fontSize: '52px', fontWeight: 900, lineHeight: 0.95, margin: 0, textTransform: 'uppercase' }}>
-              NEW <span style={{ color: '#ff6b00' }}>TASK</span>
-            </h1>
-          </div>
-
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-            {/* Title */}
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            
+            {/* แถวที่ 1: หัวข้องาน */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#ff6b00', marginBottom: '8px' }}>หัวข้องาน *</label>
-              <input style={fieldStyle('title')} placeholder="กรอกชื่อกิจกรรม" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} onFocus={() => setFocusedField('title')} onBlur={() => setFocusedField(null)} required />
+              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px' }}>หัวข้องาน *</label>
+              <input 
+                style={fieldStyle('title')} 
+                placeholder="ชื่อกิจกรรม" 
+                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                onFocus={() => setFocusedField('title')} 
+                onBlur={() => setFocusedField(null)} 
+              />
             </div>
 
-            {/* Category Dropdown */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#ff6b00', marginBottom: '8px' }}>หมวดหมู่ (Category)</label>
+            {/* ✅ แถวที่ 2: หัวหน้างาน / ผู้รับผิดชอบหลัก (แยกแถวเดี่ยว) */}
+            <div style={{ position: 'relative' }}>
+              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px' }}>หัวหน้างาน / ผู้รับผิดชอบหลัก</label>
               <select 
-                style={fieldStyle('category')} 
-                value={formData.category_id} 
-                onChange={e => setFormData({ ...formData, category_id: e.target.value })}
-                onFocus={() => setFocusedField('category')}
+                style={{ ...fieldStyle('assignee'), appearance: 'none', cursor: 'pointer' }}
+                value={formData.assignee}
+                onChange={(e) => setFormData({...formData, assignee: e.target.value})}
+                onFocus={() => setFocusedField('assignee')}
                 onBlur={() => setFocusedField(null)}
               >
-                <option value="">-- เลือกหมวดหมู่ --</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                <option value="" disabled>รายชื่อผู้รับผิดชอบหลัก</option>
+                {allUsers?.map((user: any) => (
+                  <option key={user.id} value={user.full_name || user.email} style={{ background: t.card }}>
+                    {user.full_name || user.email}
+                  </option>
                 ))}
               </select>
+              <div style={{ position: 'absolute', right: '15px', top: '38px', color: t.accent, pointerEvents: 'none', fontSize: '10px' }}>▼</div>
             </div>
 
-            {/* Priority Selection */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#ff6b00', marginBottom: '10px' }}>ระดับความสำคัญ</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                {Object.entries(priorityConfig).map(([key, cfg]) => (
-                  <button key={key} type="button" onClick={() => setFormData({ ...formData, priority: key as any })}
-                    style={{ padding: '14px 10px', background: formData.priority === key ? `${cfg.color}18` : t.inputBg, border: `1px solid ${formData.priority === key ? cfg.color : t.border}`, borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s ease' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: cfg.color, margin: '0 auto 8px' }} />
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: formData.priority === key ? cfg.color : t.subText }}>{cfg.label}</div>
-                  </button>
+            {/* ✅ แถวที่ 3: สมาชิกในทีม (แยกแถวเดี่ยว - สามารถเลือกเพื่อนเพิ่มได้) */}
+            <div style={{ position: 'relative' }}>
+              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px' }}>สมาชิกในทีม (Team Members)</label>
+              <select 
+                style={{ ...fieldStyle('team'), appearance: 'none', cursor: 'pointer' }}
+                onChange={(e) => {
+                    const val = e.target.value;
+                    if (val && !formData.team_members.includes(val)) {
+                        setFormData({...formData, team_members: [...formData.team_members, val]})
+                    }
+                }}
+                onFocus={() => setFocusedField('team')}
+                onBlur={() => setFocusedField(null)}
+              >
+                <option value="">รายชื่อสมาชิก</option>
+                {allUsers?.map((user: any) => (
+                  <option key={user.id} value={user.full_name || user.email} style={{ background: t.card }}>
+                    {user.full_name || user.email}
+                  </option>
+                ))}
+              </select>
+              <div style={{ position: 'absolute', right: '15px', top: '38px', color: t.accent, pointerEvents: 'none', fontSize: '10px' }}>▼</div>
+              
+              {/* แสดงรายชื่อสมาชิกที่ถูกเลือก */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+                {formData.team_members.map(member => (
+                  <span key={member} style={{ background: '#1a1a1a', color: t.accent, padding: '4px 12px', borderRadius: '20px', fontSize: '12px', border: `1px solid ${t.border}` }}>
+                    {member} <button type="button" onClick={() => setFormData({...formData, team_members: formData.team_members.filter(m => m !== member)})} style={{ background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer', marginLeft: '5px' }}>×</button>
+                  </span>
                 ))}
               </div>
             </div>
 
-            {/* Assignee & Due Date */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#ff6b00', marginBottom: '8px' }}>ผู้รับผิดชอบ</label>
-                <input style={fieldStyle('assignee')} placeholder="ชื่อสมาชิก" value={formData.assignee} onChange={e => setFormData({ ...formData, assignee: e.target.value })} onFocus={() => setFocusedField('assignee')} onBlur={() => setFocusedField(null)} />
+            {/* แถวที่ 4: แถวคู่ - จำนวนสมาชิกที่เปิดรับ และ กำหนดส่ง */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div style={{ position: 'relative' }}>
+                <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px' }}>จำนวนคนรวม (Max)</label>
+                <select 
+                  style={{ ...fieldStyle('max'), appearance: 'none', cursor: 'pointer' }} 
+                  value={formData.max_assignees}
+                  onChange={(e) => setFormData({...formData, max_assignees: parseInt(e.target.value)})}
+                  onFocus={() => setFocusedField('max')}
+                  onBlur={() => setFocusedField(null)}
+                >
+                  {[1, 2, 3, 4, 5, 6].map(n => (
+                    <option key={n} value={n} style={{ background: t.card }}>{n} คน</option>
+                  ))}
+                </select>
+                <div style={{ position: 'absolute', right: '15px', top: '38px', color: t.accent, pointerEvents: 'none', fontSize: '10px' }}>▼</div>
               </div>
+
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#ff6b00', marginBottom: '8px' }}>กำหนดส่ง</label>
-                <input type="date" style={{ ...fieldStyle('dueDate'), colorScheme: isDarkMode ? 'dark' : 'light' }} value={formData.dueDate} onChange={e => setFormData({ ...formData, dueDate: e.target.value })} onFocus={() => setFocusedField('dueDate')} onBlur={() => setFocusedField(null)} />
+                <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px' }}>กำหนดส่ง</label>
+                <input 
+                  type="date" 
+                  style={{ ...fieldStyle('date'), colorScheme: 'dark' }} 
+                  onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
+                />
               </div>
             </div>
 
-            {/* Description */}
+            {/* รายละเอียด */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#ff6b00', marginBottom: '8px' }}>รายละเอียด</label>
-              <textarea style={{ ...fieldStyle('description'), minHeight: '80px', resize: 'vertical' }} placeholder="ใส่รายละเอียด..." value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} onFocus={() => setFocusedField('description')} onBlur={() => setFocusedField(null)} />
+              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px' }}>รายละเอียด</label>
+              <textarea 
+                style={{ ...fieldStyle('desc'), minHeight: '80px', resize: 'none' }} 
+                placeholder="ใส่รายละเอียดงาน..." 
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+              />
             </div>
 
-            {/* ✅ ส่วนที่แก้ Error: ปุ่มแยกออกจากกันชัดเจน */}
-            <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-              <button 
-                type="button" 
-                onClick={() => router.back()} 
-                style={{ flex: 1, padding: '14px', background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer', color: t.subText }}
-              >
-                ยกเลิก
-              </button>
-              
-              <button 
-                type="submit" 
-                disabled={isSubmitting} 
-                style={{ flex: 2, padding: '14px', background: '#ff6b00', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, color: '#0a0a0a', boxShadow: '0 4px 20px rgba(255,107,0,0.2)' }}
-              >
-                {isSubmitting ? 'กำลังบันทึก...' : '+ สร้างงาน'}
+            {/* ปุ่ม Action */}
+            <div style={{ display: 'flex', gap: '15px', marginTop: '10px' }}>
+              <button type="button" onClick={() => router.back()} style={{ flex: 1, padding: '14px', background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', color: t.subText, cursor: 'pointer' }}>ยกเลิก</button>
+              <button type="submit" style={{ flex: 2, padding: '14px', background: t.accent, border: 'none', borderRadius: '8px', color: '#000', fontWeight: 800, cursor: 'pointer' }}>
+                + สร้างงานใหม่
               </button>
             </div>
           </form>
         </div>
       </div>
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sarabun:wght@400;600;700&display=swap');
-        select { appearance: none; cursor: pointer; }
-      `}</style>
     </main>
   )
 }
