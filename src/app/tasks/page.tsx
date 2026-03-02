@@ -1,286 +1,301 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '../../lib/supabaseClient' // เพิ่มการ import ตรงนี้
-import { useTasks } from '../../context/TaskContext'
+import { supabase } from '../../lib/supabaseClient'
+import { useTasks, Task } from '../../context/TaskContext'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 
 export default function TasksPage() {
   const router = useRouter()
-  const { tasks, categories, reorderTasks, deleteTask, isDarkMode, getTaskTimeStatus } = useTasks()
-  
+  const { tasks, categories, deleteTask, isDarkMode } = useTasks()
+
   const [searchTerm, setSearchTerm] = useState('')
   const [filterPriority, setFilterPriority] = useState('all')
   const [filterCategory, setFilterCategory] = useState('all')
   const [hasMounted, setHasMounted] = useState(false)
 
-  // 🔐 LOGIN GUARD (แก้ไขเฉพาะจุดนี้: เช็ค Session ผ่าน Supabase โดยตรง)
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.replace("/login")
-        return
-      }
+      if (!session) { router.replace('/login'); return }
       setHasMounted(true)
     }
     checkSession()
   }, [router])
 
+  if (!hasMounted) return null
+
   const t = {
-    bg:         isDarkMode ? '#0a0a0a' : '#fafaf8',
-    card:       isDarkMode ? '#0f0f0f' : '#ffffff',
-    cardHover:  isDarkMode ? '#131313' : '#fff8f4',
-    text:       isDarkMode ? '#f0ede8' : '#111110',
-    subText:    isDarkMode ? '#6a6a62' : '#7a7a72',
-    border:     isDarkMode ? 'rgba(255,107,0,0.12)' : 'rgba(255,107,0,0.18)',
-    borderStr:  isDarkMode ? 'rgba(255,107,0,0.35)' : 'rgba(255,107,0,0.45)',
-    grid:       isDarkMode ? 'rgba(255,107,0,0.035)' : 'rgba(255,107,0,0.06)',
-    inputBg:    isDarkMode ? '#0a0a0a' : '#ffffff',
-    dragOver:   isDarkMode ? 'rgba(255,107,0,0.06)' : 'rgba(255,107,0,0.04)',
-    statBg:     isDarkMode ? '#0f0f0f' : '#ffffff',
-    colBorder:  isDarkMode ? 'rgba(255,107,0,0.12)' : 'rgba(255,107,0,0.2)',
+    bg:      isDarkMode ? '#0a0a0a' : '#f4f4f0',
+    card:    isDarkMode ? '#141414' : '#ffffff',
+    col:     isDarkMode ? '#0d0d0d' : '#f9f9f7',
+    text:    isDarkMode ? '#f0ede8' : '#111111',
+    subText: isDarkMode ? '#666660' : '#888880',
+    accent:  '#ff6b00',
+    border:  isDarkMode ? 'rgba(255,107,0,0.18)' : 'rgba(255,107,0,0.22)',
+    colBg:   isDarkMode ? '#111111' : '#f0efe9',
   }
 
-  const thaiFont = "'Sarabun', sans-serif"
-  const engFont  = "'Bebas Neue', 'Impact', sans-serif"
-  const monoFont = "'Courier New', monospace"
+  const priorityColor: Record<string, string> = {
+    high: '#ff4444', medium: '#ff6b00', low: '#44cc88',
+  }
+  const priorityLabel: Record<string, string> = {
+    high: 'สูง', medium: 'กลาง', low: 'ต่ำ'
+  }
 
-  // 📊 Stats Calculation
-  const totalTasks = tasks?.length || 0
-  const doneTasks  = tasks?.filter(t => t.status === 'done').length || 0
-  const doingTasks = tasks?.filter(t => t.status === 'doing').length || 0
-  const todoTasks  = tasks?.filter(t => t.status === 'todo').length || 0
+  const filteredTasks = tasks.filter(task => {
+    const matchText     = task.title.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchPriority = filterPriority === 'all' || task.priority === filterPriority
+    const matchCategory = filterCategory === 'all' || task.category_id === filterCategory
+    return matchText && matchPriority && matchCategory
+  })
 
-  // 🔍 Filtering Logic
-  const filteredTasks = tasks?.filter(task => {
-    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesPriority = filterPriority === 'all' || task.priority === filterPriority
-    const matchesCategory = filterCategory === 'all' || task.category_id === filterCategory
-    return matchesSearch && matchesPriority && matchesCategory
-  }) || []
-
-  const onDragEnd = useCallback((result: DropResult) => {
-    const { destination, source, draggableId } = result
-    if (!destination) return
-    reorderTasks(destination, source, draggableId)
-  }, [reorderTasks])
-
-  const columns = [
-    { id: 'todo',  label: 'TO DO',       title: 'รายการใหม่' },
-    { id: 'doing', label: 'IN PROGRESS', title: 'กำลังทำ' },
-    { id: 'done',  label: 'DONE',        title: 'เสร็จสิ้น' },
+  const columns: { id: Task['status']; label: string; emoji: string }[] = [
+    { id: 'todo',  label: 'TO DO',  emoji: '📋' },
+    { id: 'doing', label: 'DOING',  emoji: '⚡' },
+    { id: 'done',  label: 'DONE',   emoji: '✅' },
   ]
 
-  if (!hasMounted) return null
+  const onDragEnd = (_: DropResult) => {}
+
+  const inputStyle: React.CSSProperties = {
+    padding: '10px 14px',
+    background: t.card,
+    border: `1px solid ${t.border}`,
+    borderRadius: 8,
+    color: t.text,
+    fontSize: 13,
+    outline: 'none',
+    fontFamily: "'Sarabun', sans-serif",
+  }
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <main style={{ minHeight: '100vh', background: t.bg, color: t.text, fontFamily: thaiFont, position: 'relative', overflow: 'hidden', transition: 'background 0.3s ease' }}>
-        
-        {/* BG Decor */}
-        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, backgroundImage: `linear-gradient(${t.grid} 1px, transparent 1px), linear-gradient(90deg, ${t.grid} 1px, transparent 1px)`, backgroundSize: '60px 60px' }} />
+      <main style={{ minHeight: '100vh', background: t.bg, padding: '32px 40px', fontFamily: "'Sarabun', sans-serif" }}>
 
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: '1280px', margin: '0 auto', padding: '40px 32px' }}>
-          
-          {/* Header */}
-          <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
-            <div>
-              <div style={{ fontFamily: monoFont, fontSize: '11px', color: '#ff6b00', letterSpacing: '0.2em', marginBottom: '8px' }}>// TASK BOARD</div>
-              <h1 style={{ fontFamily: engFont, fontSize: 'clamp(40px, 5vw, 64px)', fontWeight: 900, lineHeight: 0.95, margin: 0, letterSpacing: '-1px', textTransform: 'uppercase' }}>
-                <span style={{ color: t.text }}>MY </span>
-                <span style={{ color: '#ff6b00', textShadow: '0 0 30px rgba(255,107,0,0.3)' }}>TASKS</span>
-              </h1>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <Link href="/tasks/analytics" style={{ 
-                border: `1px solid #ff6b00`, 
-                color: '#ff6b00', 
-                padding: '13px 24px', 
-                borderRadius: '4px', 
-                textDecoration: 'none', 
-                fontWeight: 700, 
-                fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s'
-              }}>
-                📊 ANALYTICS
-              </Link>
-              <Link href="/tasks/create" style={{ 
-                background: '#ff6b00', 
-                color: '#0a0a0a', 
-                padding: '13px 28px', 
-                borderRadius: '4px', 
-                textDecoration: 'none', 
-                fontWeight: 700, 
-                boxShadow: '0 0 30px rgba(255,107,0,0.3)' 
-              }}>
-                + สร้างงานใหม่
-              </Link>
-            </div>
-          </header>
-
-          {/* Stats Bar */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '2px', marginBottom: '28px', background: t.borderStr, borderRadius: '8px', overflow: 'hidden' }}>
-            {[
-              { label: 'ทั้งหมด', value: totalTasks, color: t.text },
-              { label: 'รายการใหม่', value: todoTasks, color: t.subText },
-              { label: 'กำลังทำ', value: doingTasks, color: '#ffaa44' },
-              { label: 'เสร็จแล้ว', value: doneTasks, color: '#ff6b00' },
-            ].map((s, i) => (
-              <div key={i} style={{ background: t.statBg, padding: '20px 24px', textAlign: 'center' }}>
-                <div style={{ fontFamily: engFont, fontSize: '44px', fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                <div style={{ fontSize: '13px', color: t.subText, marginTop: '4px' }}>{s.label}</div>
-              </div>
-            ))}
+        {/* Header */}
+        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 28 }}>
+          <div>
+            <div style={{ fontFamily: 'monospace', fontSize: 10, color: t.accent, letterSpacing: 3, marginBottom: 4 }}>// TASK_BOARD</div>
+            <h1 style={{ color: t.text, margin: 0, fontFamily: "'Bebas Neue', sans-serif", fontSize: 42, letterSpacing: 2 }}>
+              MY <span style={{ color: t.accent }}>TASKS</span>
+            </h1>
           </div>
+          <Link href="/tasks/create" style={{
+            padding: '12px 24px',
+            background: t.accent,
+            color: '#000',
+            borderRadius: 10,
+            fontWeight: 900,
+            fontSize: 14,
+            textDecoration: 'none',
+            boxShadow: `0 0 20px ${t.accent}44`,
+            letterSpacing: 1,
+          }}>
+            + สร้างภารกิจ
+          </Link>
+        </header>
 
-          {/* Search & Filters */}
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
-            <input 
-              placeholder="ค้นหางาน..." 
-              value={searchTerm} 
-              onChange={(e) => setSearchTerm(e.target.value)} 
-              style={{ flex: 2, padding: '13px 18px', background: t.inputBg, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, outline: 'none' }} 
-            />
-            
-            <select 
-              value={filterCategory} 
-              onChange={(e) => setFilterCategory(e.target.value)}
-              style={{ flex: 1, padding: '13px 18px', background: t.inputBg, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, cursor: 'pointer' }}
-            >
-              <option value="all">ทุกหมวดหมู่</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
+        {/* Search & Filter */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 28, flexWrap: 'wrap' }}>
+          <input
+            style={{ ...inputStyle, flex: 1, minWidth: 200 }}
+            placeholder="🔍 ค้นหางาน..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+          <select style={inputStyle as any} value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
+            <option value="all">📁 ทุกหมวด</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <select style={inputStyle as any} value={filterPriority} onChange={e => setFilterPriority(e.target.value)}>
+            <option value="all">🎯 ทุกระดับ</option>
+            <option value="high">🔴 สูง</option>
+            <option value="medium">🟠 กลาง</option>
+            <option value="low">🟢 ต่ำ</option>
+          </select>
+        </div>
 
-            <select 
-              value={filterPriority} 
-              onChange={(e) => setFilterPriority(e.target.value)}
-              style={{ flex: 1, padding: '13px 18px', background: t.inputBg, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, cursor: 'pointer' }}
-            >
-              <option value="all">ทุกความสำคัญ</option>
-              <option value="high">สูง (High)</option>
-              <option value="medium">ปกติ (Medium)</option>
-              <option value="low">ต่ำ (Low)</option>
-            </select>
-          </div>
-
-          {/* Kanban Board */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
-            {columns.map((col, colIndex) => (
+        {/* Board */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+          {columns.map(col => {
+            const colTasks = filteredTasks.filter(tk => tk.status === col.id)
+            return (
               <Droppable key={col.id} droppableId={col.id}>
                 {(provided, snapshot) => (
-                  <div 
-                    {...provided.droppableProps} ref={provided.innerRef}
-                    style={{ background: snapshot.isDraggingOver ? t.dragOver : 'transparent', border: `2px dashed ${snapshot.isDraggingOver ? '#ff6b00' : t.colBorder}`, borderRadius: '10px', padding: '20px', minHeight: '600px', transition: 'all 0.2s ease' }}
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    style={{
+                      background: snapshot.isDraggingOver
+                        ? isDarkMode ? '#1a1a0a' : '#fff8f0'
+                        : t.colBg,
+                      border: `1.5px dashed ${snapshot.isDraggingOver ? t.accent : t.border}`,
+                      borderRadius: 14,
+                      padding: 16,
+                      minHeight: 520,
+                      transition: 'all 0.2s ease',
+                    }}
                   >
-                    <div style={{ marginBottom: '24px', borderBottom: `2px solid ${colIndex === 0 ? '#555' : colIndex === 1 ? '#ffaa44' : '#ff6b00'}`, paddingBottom: '10px' }}>
-                       <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>{col.title}</h2>
-                       <span style={{ fontSize: '10px', color: t.subText, fontFamily: monoFont }}>{col.label}</span>
+                    {/* Column Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 18 }}>{col.emoji}</span>
+                        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, color: t.text, letterSpacing: 2 }}>
+                          {col.label}
+                        </span>
+                      </div>
+                      <span style={{
+                        background: `${t.accent}22`,
+                        color: t.accent,
+                        borderRadius: 20,
+                        padding: '2px 10px',
+                        fontSize: 12,
+                        fontWeight: 700,
+                      }}>
+                        {colTasks.length}
+                      </span>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {filteredTasks.filter(task => task.status === col.id).map((task, index) => (
-                        <Draggable key={task.id} draggableId={task.id} index={index}>
-                          {(provided, snapshot) => (
-                            <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}
-                              style={{ ...provided.draggableProps.style, opacity: snapshot.isDragging ? 0.8 : 1 }}
-                            >
-                              <TaskCard 
-                                task={task} 
-                                t={t} 
-                                getTaskTimeStatus={getTaskTimeStatus} 
-                                onDelete={() => { if(confirm('ลบงานนี้?')) deleteTask(task.id) }} 
-                              />
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </div>
+                    {/* Cards */}
+                    {colTasks.map((task, index) => (
+                      <Draggable key={task.id} draggableId={task.id} index={index}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                          >
+                            <TaskCard
+                              task={task}
+                              t={t}
+                              priorityColor={priorityColor}
+                              priorityLabel={priorityLabel}
+                              isDragging={snapshot.isDragging}
+                              onDelete={() => { if (confirm('ลบงานนี้?')) deleteTask(task.id) }}
+                            />
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+
+                    {colTasks.length === 0 && (
+                      <div style={{ textAlign: 'center', color: t.subText, fontSize: 13, marginTop: 60, opacity: 0.5 }}>
+                        ไม่มีงานในขั้นตอนนี้
+                      </div>
+                    )}
+
+                    {provided.placeholder}
                   </div>
                 )}
               </Droppable>
-            ))}
-          </div>
+            )
+          })}
         </div>
+
       </main>
     </DragDropContext>
   )
 }
 
-function TaskCard({ task, t, onDelete, getTaskTimeStatus }: any) {
-  const priorityConfig: any = {
-    high:   { color: '#ef4444', label: 'สูง' },
-    medium: { color: '#ffaa44', label: 'ปกติ' },
-    low:    { color: '#22c55e', label: 'ต่ำ' },
-  }
-  const p = priorityConfig[task.priority] || priorityConfig.medium
-  const timeStatus = task.status !== 'done' ? getTaskTimeStatus(task.dueDate) : null
+function TaskCard({
+  task, t, priorityColor, priorityLabel, isDragging, onDelete
+}: {
+  task: Task
+  t: any
+  priorityColor: Record<string, string>
+  priorityLabel: Record<string, string>
+  isDragging: boolean
+  onDelete: () => void
+}) {
+  const pColor = priorityColor[task.priority] || '#888'
 
   return (
-    <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '16px', position: 'relative', transition: 'all 0.2s' }}>
-      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px', background: p.color }} />
-      
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-          <span style={{ fontSize: '10px', fontWeight: 700, color: p.color, background: `${p.color}15`, padding: '2px 8px', borderRadius: '4px', border: `1px solid ${p.color}30` }}>
-            {p.label}
-          </span>
-          
-          {timeStatus && timeStatus.label !== 'NO DEADLINE' && (
-            <span style={{ 
-              fontSize: '10px', 
-              fontWeight: 800, 
-              color: '#fff', 
-              background: timeStatus.color, 
-              padding: '2px 8px', 
-              borderRadius: '4px',
-              boxShadow: `0 0 10px ${timeStatus.color}40`
-            }}>
-              {timeStatus.label}
-            </span>
-          )}
+    <div style={{
+      background: t.card,
+      border: `1px solid ${isDragging ? '#ff6b00' : t.border}`,
+      borderLeft: `3px solid ${pColor}`,
+      borderRadius: 10,
+      padding: '14px 16px',
+      marginBottom: 12,
+      boxShadow: isDragging
+        ? '0 8px 30px rgba(255,107,0,0.25)'
+        : '0 2px 8px rgba(0,0,0,0.08)',
+      transform: isDragging ? 'rotate(1deg)' : 'none',
+      transition: 'all 0.15s ease',
+      cursor: 'grab',
+    }}>
 
-          {task.categories && (
-            <span style={{ fontSize: '10px', fontWeight: 700, color: task.categories.color, background: `${task.categories.color}15`, padding: '2px 8px', borderRadius: '4px', border: `1px solid ${task.categories.color}30` }}>
-              {task.categories.name}
-            </span>
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: '8px', marginLeft: '10px' }}>
-          <Link href={`/tasks/edit/${task.id}`} style={{ textDecoration: 'none', fontSize: '14px' }}>✏️</Link>
-          <button onClick={onDelete} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>🗑️</button>
+      {/* Top row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+        <span style={{
+          fontSize: 10,
+          fontWeight: 700,
+          color: pColor,
+          background: `${pColor}18`,
+          padding: '2px 8px',
+          borderRadius: 20,
+          letterSpacing: 1,
+        }}>
+          {priorityLabel[task.priority] || task.priority}
+        </span>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <Link href={`/tasks/edit/${task.id}`} style={{
+            fontSize: 13, padding: '3px 8px',
+            background: 'rgba(255,107,0,0.1)',
+            borderRadius: 6, textDecoration: 'none',
+            color: '#ff6b00',
+          }}>✏️</Link>
+          <button onClick={onDelete} style={{
+            fontSize: 13, padding: '3px 8px',
+            background: 'rgba(255,60,60,0.1)',
+            border: 'none', borderRadius: 6,
+            cursor: 'pointer', color: '#ff4444',
+          }}>🗑️</button>
         </div>
       </div>
 
-      <h3 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 6px 0', color: t.text }}>{task.title}</h3>
-      <p style={{ fontSize: '13px', color: t.subText, margin: '0 0 12px 0', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-        {task.description || '...'}
-      </p>
+      {/* Title */}
+      <div style={{ fontWeight: 700, fontSize: 14, color: t.text, marginBottom: 6, lineHeight: 1.4 }}>
+        {task.title}
+      </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${t.border}`, paddingTop: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#ff6b00', color: '#fff', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-            {task.assignee ? task.assignee[0].toUpperCase() : '?'}
-          </div>
-          <span style={{ fontSize: '12px', color: t.subText }}>{task.assignee || 'N/A'}</span>
+      {/* Description */}
+      {task.description && (
+        <div style={{
+          fontSize: 12, color: t.subText, marginBottom: 8, lineHeight: 1.5,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+        } as any}>
+          {task.description}
         </div>
-        {task.dueDate && (
-          <span style={{ 
-            fontSize: '10px', 
-            color: timeStatus?.label === 'OVERDUE' ? '#ff4d4d' : '#ff6b00', 
-            opacity: 0.8,
-            fontFamily: "'Courier New', monospace" 
-          }}>
-            {new Date(task.dueDate).toLocaleDateString('th-TH', { day: '2-digit', month: 'short' })}
+      )}
+
+      {/* Category tag */}
+      {task.categories && (
+        <span style={{
+          fontSize: 10, padding: '2px 8px',
+          background: `${task.categories.color || '#ff6b00'}22`,
+          color: task.categories.color || '#ff6b00',
+          borderRadius: 20, marginBottom: 8, display: 'inline-block',
+          border: `1px solid ${task.categories.color || '#ff6b00'}44`,
+        }}>
+          {task.categories.name}
+        </span>
+      )}
+
+      {/* Footer */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+        {task.due_date ? (
+          <span style={{ fontSize: 11, color: t.subText }}>
+            📅 {new Date(task.due_date).toLocaleDateString('th-TH')}
+          </span>
+        ) : <span />}
+
+        {task.team_members && task.team_members.length > 0 && (
+          <span style={{ fontSize: 11, color: t.subText }}>
+            👥 {task.current_people || 1}/{task.max_assignees || 1}
           </span>
         )}
       </div>

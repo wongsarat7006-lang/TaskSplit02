@@ -1,116 +1,238 @@
 'use client'
 
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useTasks } from '../context/TaskContext'
+import { useTasks, Task } from '../context/TaskContext'
+import { supabase } from '../lib/supabaseClient'
 
 export default function DashboardPage() {
-  // ดึงข้อมูลจาก Context ที่คุณแก้มาแล้ว (จะไม่แดงแล้ว)
-  const { tasks, currentUser, updateTask } = useTasks()
+  const {
+    tasks = [],
+    currentUser,
+    fetchTasks,
+    loading,
+    isDarkMode, // ⬅️ ใช้โหมดจาก Context
+  } = useTasks()
 
-  const t = {
-    bg: '#0a0a0a',
-    card: '#0f0f0f',
-    accent: '#ff6b00', // สีส้ม Cyberpunk
-    text: '#f0ede8',
-    subText: '#6a6a62',
-    border: 'rgba(255, 107, 0, 0.2)',
-  }
+  const [joiningId, setJoiningId] = useState<string | null>(null)
+
+  /* =======================
+     Theme Configuration
+  ======================= */
+  const t = isDarkMode
+    ? {
+        bg: '#0b0d10',
+        card: 'rgba(255,255,255,0.04)',
+        accent: '#ff6b00',
+        text: '#f0ede8',
+        subText: '#9ca3af',
+        border: 'rgba(255,107,0,0.25)',
+      }
+    : {
+        bg: '#f9fafb',
+        card: '#ffffff',
+        accent: '#ff6b00',
+        text: '#111827',
+        subText: '#6b7280',
+        border: 'rgba(255,107,0,0.3)',
+      }
 
   const engFont = "'Bebas Neue', sans-serif"
 
-  // ฟังก์ชันสำหรับกดรับงาน
-  const handleJoin = async (task: any) => {
-    const currentCount = task.current_people || 1
-    if (currentCount < (task.max_assignees || 1)) {
-      // อัปเดตจำนวนคนในฐานข้อมูลผ่าน Context
-      await updateTask({ ...task, current_people: currentCount + 1 })
-      alert('เข้าร่วมงานสำเร็จ!')
-    } else {
-      alert('ขออภัย งานนี้เต็มแล้ว')
+  /* =======================
+     Fetch Tasks on Mount
+  ======================= */
+  useEffect(() => {
+    fetchTasks?.()
+  }, [fetchTasks])
+
+  /* =======================
+     Join Mission
+  ======================= */
+  const handleJoin = async (task: Task) => {
+    if (!currentUser) {
+      alert('กรุณาเข้าสู่ระบบก่อนเข้าร่วมภารกิจ')
+      return
+    }
+
+    if (joiningId) return
+
+    const members = task.team_members || []
+    const currentCount = task.current_people || 0
+    const maxCount = task.max_assignees || 1
+
+    if (members.includes(currentUser.email)) {
+      alert('คุณเป็นสมาชิกของภารกิจนี้อยู่แล้ว')
+      return
+    }
+
+    if (currentCount >= maxCount) {
+      alert('ขออภัย ภารกิจนี้เต็มแล้ว')
+      return
+    }
+
+    try {
+      setJoiningId(task.id)
+
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          current_people: currentCount + 1,
+          team_members: [...members, currentUser.email],
+        })
+        .eq('id', task.id)
+
+      if (error) throw error
+
+      await fetchTasks?.()
+    } catch (err: any) {
+      alert('เกิดข้อผิดพลาด: ' + err.message)
+    } finally {
+      setJoiningId(null)
     }
   }
 
+  /* =======================
+     Filter Public Missions
+  ======================= */
+  const publicMissions = tasks.filter(task => {
+    if (!currentUser) return true
+    const isJoined = task.team_members?.includes(currentUser.email)
+    const isOwner = task.user_id === currentUser.id
+    return !isJoined && !isOwner
+  })
+
+  /* =======================
+     Loading
+  ======================= */
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: t.bg,
+        color: t.text,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column'
+      }}>
+        <div style={{
+          width: 40,
+          height: 40,
+          border: `3px solid ${t.border}`,
+          borderTop: `3px solid ${t.accent}`,
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }} />
+        <p style={{ marginTop: 20, fontFamily: engFont }}>
+          LOADING MISSIONS...
+        </p>
+      </div>
+    )
+  }
+
+  /* =======================
+     Render
+  ======================= */
   return (
-    <div style={{ minHeight: '100vh', background: t.bg, color: t.text, padding: '40px', fontFamily: 'Sarabun, sans-serif' }}>
-      
-      {/* ส่วนหัว: คลีน ๆ มีแค่ชื่อหน้าและปุ่มส้ม */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '50px' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: t.bg,
+      color: t.text,
+      padding: 40,
+      transition: 'all 0.3s ease'
+    }}>
+
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'baseline',
+        marginBottom: 50,
+        borderBottom: `1px solid ${t.border}`,
+        paddingBottom: 30
+      }}>
         <div>
-          <h1 style={{ fontFamily: engFont, fontSize: '56px', margin: 0, letterSpacing: '2px' }}>
+          <h1 style={{
+            fontFamily: engFont,
+            fontSize: 64,
+            margin: 0
+          }}>
             PUBLIC <span style={{ color: t.accent }}>MISSIONS</span>
           </h1>
-          <p style={{ color: t.subText, margin: '5px 0 0 0' }}>งานทั้งหมดที่เปิดรับอาสาสมัครในขณะนี้</p>
+          <p style={{ color: t.subText }}>
+            ค้นหาและรับภารกิจที่เหมาะสม
+          </p>
         </div>
 
-        {/* ✅ ปุ่มสร้างงานส้ม ลิ้งค์ไปไฟล์สร้างงาน */}
         <Link href="/tasks/create">
           <button style={{
-            background: t.accent, color: '#000', border: 'none', borderRadius: '12px',
-            padding: '16px 32px', fontSize: '18px', fontWeight: 900, cursor: 'pointer',
-            fontFamily: engFont, boxShadow: `0 0 30px ${t.accent}33`, transition: '0.3s'
+            background: t.accent,
+            color: '#000',
+            border: 'none',
+            padding: '18px 36px',
+            fontFamily: engFont,
+            fontWeight: 900,
+            borderRadius: 14,
+            cursor: 'pointer'
           }}>
-            + CREATE NEW TASK
+            + CREATE MISSION
           </button>
         </Link>
       </div>
 
-      {/* รายการงาน: ทุกคนเห็นเหมือนกัน */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '25px' }}>
-        {tasks?.map(task => {
-          const isFull = (task.current_people || 1) >= (task.max_assignees || 1)
-          const isMyTask = task.authorEmail === currentUser?.email
+      {/* Mission Grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+        gap: 30
+      }}>
+        {publicMissions.map(task => (
+          <div
+            key={task.id}
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: 24,
+              padding: 30,
+              display: 'flex',
+              flexDirection: 'column',
+              backdropFilter: isDarkMode ? 'blur(14px)' : 'none'
+            }}
+          >
+            <h2>{task.title}</h2>
 
-          return (
-            <div key={task.id} style={{ 
-              background: t.card, border: `1px solid ${isMyTask ? t.accent : t.border}`, 
-              borderRadius: '20px', padding: '24px', transition: '0.3s',
-              boxShadow: isMyTask ? `0 0 15px ${t.accent}22` : 'none'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <span style={{ fontSize: '12px', color: t.accent, fontWeight: 'bold' }}>
-                  {isMyTask ? '// YOUR_TASK' : `// BY_${task.authorEmail?.split('@')[0].toUpperCase()}`}
-                </span>
-                <span style={{ fontSize: '12px', color: t.subText }}>{task.dueDate || 'NO DEADLINE'}</span>
-              </div>
-              
-              <div style={{ fontWeight: 800, fontSize: '24px', color: t.text, marginBottom: '20px' }}>{task.title}</div>
+            <p style={{ color: t.subText }}>
+              {task.description || 'ไม่มีรายละเอียด'}
+            </p>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#080808', padding: '15px', borderRadius: '12px', border: '1px solid #111' }}>
-                <div>
-                  <div style={{ fontSize: '11px', color: t.subText, textTransform: 'uppercase' }}>Available Slots</div>
-                  <div style={{ fontSize: '20px', fontWeight: 'bold', color: isFull ? '#ff4d4d' : t.accent }}>
-                    {task.current_people || 1} / {task.max_assignees || 1}
-                  </div>
-                </div>
-
-                {/* ปุ่มรับงาน: ถ้าไม่ใช่ของเราและยังไม่เต็ม จะกดได้ */}
-                {!isMyTask && (
-                  <button 
-                    onClick={() => handleJoin(task)}
-                    disabled={isFull}
-                    style={{ 
-                      background: isFull ? 'transparent' : t.accent, 
-                      color: isFull ? '#444' : '#000',
-                      border: isFull ? '1px solid #333' : 'none', 
-                      padding: '10px 20px', borderRadius: '8px', 
-                      fontWeight: 900, cursor: isFull ? 'not-allowed' : 'pointer',
-                      fontSize: '14px'
-                    }}
-                  >
-                    {isFull ? 'CLOSED' : 'JOIN +'}
-                  </button>
-                )}
-              </div>
-            </div>
-          )
-        })}
+            <button
+              onClick={() => handleJoin(task)}
+              disabled={joiningId === task.id}
+              style={{
+                marginTop: 'auto',
+                background: t.accent,
+                border: 'none',
+                padding: 14,
+                fontWeight: 900,
+                borderRadius: 12,
+                cursor: 'pointer'
+              }}
+            >
+              JOIN MISSION +
+            </button>
+          </div>
+        ))}
       </div>
 
-      {/* กรณีไม่มีงานเลย */}
-      {tasks.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '100px', border: `1px dashed ${t.border}`, borderRadius: '20px' }}>
-          <p style={{ color: t.subText }}>ยังไม่มีการสร้างงานในระบบส่วนกลาง</p>
-        </div>
+      {publicMissions.length === 0 && (
+        <p style={{
+          marginTop: 80,
+          textAlign: 'center',
+          color: t.subText
+        }}>
+          ไม่พบภารกิจใหม่
+        </p>
       )}
     </div>
   )

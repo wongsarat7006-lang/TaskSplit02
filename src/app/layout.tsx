@@ -1,31 +1,21 @@
-'use client'
-
-import { useState, useEffect } from 'react'
-import { TaskProvider } from '../context/TaskContext'
-import { UserProvider } from '../context/UserContext'
+import '../styles/globals.css'
+import Providers from './providers'
 import LayoutWrapper from '../components/common/LayoutWrapper'
+import React from 'react'
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="th">
       <body style={{ margin: 0, padding: 0 }}>
-        {!mounted ? (
-          <div style={{ background: '#0f172a', minHeight: '100vh' }} />
-        ) : (
-          <UserProvider>
-            <TaskProvider>
-              <LayoutWrapper>
-                {children}
-              </LayoutWrapper>
-            </TaskProvider>
-          </UserProvider>
-        )}
+        <Providers>
+          <LayoutWrapper>
+            {children}
+          </LayoutWrapper>
+        </Providers>
       </body>
     </html>
   )
