@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useState, useEffect, use } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTasks } from '../../../../context/TaskContext'
 import { supabase } from '../../../../lib/supabaseClient'
 
-export default function EditTaskPage({ params }: { params: Promise<{ id: string }> }) {
+export default function EditTaskPage({ params }: { params: { id: string } }) {
   const {
     tasks,
     categories,
@@ -17,8 +17,7 @@ export default function EditTaskPage({ params }: { params: Promise<{ id: string 
   } = useTasks()
 
   const router = useRouter()
-  const resolvedParams = use(params)
-  const taskId = resolvedParams.id
+  const taskId = params.id
 
   // -------------------- STATE --------------------
   const [formData, setFormData] = useState({
@@ -47,7 +46,6 @@ export default function EditTaskPage({ params }: { params: Promise<{ id: string 
     subText: isDarkMode ? '#5a5a52' : '#8a8a82',
     border: isDarkMode ? 'rgba(255,107,0,0.15)' : 'rgba(255,107,0,0.2)',
     inputBg: isDarkMode ? '#0a0a0a' : '#fafaf8',
-    grid: isDarkMode ? 'rgba(255,107,0,0.035)' : 'rgba(255,107,0,0.06)',
   }
 
   const thaiFont = "'Sarabun', sans-serif"
