@@ -34,9 +34,15 @@ export default function ProfilePage() {
     }
   }, [user])
 
-  // ⭐ ใช้ email ที่ล็อกอินจริง
+  // ⭐ งานของฉัน: งานที่สร้างเอง หรือมีชื่ออยู่ในทีม
   const myTasks =
    tasks?.filter(task => task.author_email === user?.email) || []
+    tasks?.filter(task => {
+      if (!user?.email) return false
+      const isOwner = task.author_email === user.email || task.user_id === user.id
+      const inTeam = task.team_members?.includes(user.email)
+      return isOwner || inTeam
+    }) || []
 
   const todoCount = myTasks.filter(t => t.status === 'todo').length
   const doingCount = myTasks.filter(t => t.status === 'doing').length

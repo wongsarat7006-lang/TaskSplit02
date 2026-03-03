@@ -26,14 +26,16 @@ export default function Sidebar() {
   }
 
   const t = {
-    bg:        isDarkMode ? '#0a0a0a' : '#ffffff',
-    border:    isDarkMode ? 'rgba(255,107,0,0.15)' : 'rgba(255,107,0,0.1)',
-    borderStr: isDarkMode ? 'rgba(255,107,0,0.5)' : 'rgba(255,107,0,0.4)',
-    text:      isDarkMode ? '#f0ede8' : '#111110',
-    subText:   isDarkMode ? '#6a6a62' : '#8a8a82',
-    grid:      isDarkMode ? 'rgba(255,107,0,0.03)' : 'rgba(255,107,0,0.05)',
-    shadow:    isDarkMode ? '4px 0 30px rgba(0,0,0,0.5)' : '4px 0 20px rgba(0,0,0,0.06)',
-    activeNav: isDarkMode ? 'rgba(255,107,0,0.12)' : 'rgba(255,107,0,0.05)',
+    // ทำให้ sidebar "ตัด" กับพื้นหลังมากขึ้น และเพิ่ม contrast ของตัวหนังสือในโหมดมืด
+    bg:        isDarkMode ? '#070707' : '#ffffff',
+    border:    isDarkMode ? 'rgba(255,107,0,0.22)' : 'rgba(255,107,0,0.12)',
+    borderStr: isDarkMode ? 'rgba(255,107,0,0.55)' : 'rgba(255,107,0,0.45)',
+    text:      isDarkMode ? '#f6f2ed' : '#111110',
+    subText:   isDarkMode ? '#c8c4be' : '#3f3f39',
+    grid:      isDarkMode ? 'rgba(255,107,0,0.05)' : 'rgba(255,107,0,0.05)',
+    shadow:    isDarkMode ? '8px 0 40px rgba(0,0,0,0.65)' : '6px 0 26px rgba(0,0,0,0.08)',
+    activeNav: isDarkMode ? 'rgba(255,107,0,0.18)' : 'rgba(255,107,0,0.07)',
+    surface:   isDarkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
   }
 
   const thaiFont = "'Sarabun', sans-serif"
@@ -44,8 +46,12 @@ export default function Sidebar() {
     <aside
       style={{
         width: sidebarWidth,
-        height: '100vh',
-        background: t.bg,
+        // ให้ sidebar ยาวชนล่างจอ และอยู่กับที่เวลาเลื่อน
+        height: '100dvh',
+        minHeight: '100vh',
+        position: 'sticky',
+        top: 0,
+        background: `linear-gradient(180deg, ${t.bg}, ${isDarkMode ? '#050505' : '#ffffff'})`,
         transition: 'width 0.3s ease',
         display: 'flex',
         flexDirection: 'column',
@@ -68,6 +74,18 @@ export default function Sidebar() {
           backgroundSize: '40px 40px',
         }}
       />
+
+      {/* Accent divider to increase separation */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: 2,
+        height: '100%',
+        background: `linear-gradient(180deg, transparent, ${t.borderStr}, transparent)`,
+        opacity: isDarkMode ? 0.9 : 0.6,
+        pointerEvents: 'none',
+      }} />
 
       <div
         style={{
@@ -135,15 +153,16 @@ export default function Sidebar() {
           padding: '12px',
           borderRadius: '6px',
           border: `1px solid ${t.border}`,
-          background: 'transparent',
+          background: t.surface,
           cursor: 'pointer',
           display: 'flex',
+          width: '100%',
           justifyContent: isSidebarOpen ? 'flex-start' : 'center',
           gap: '10px',
-          color: t.subText,
+          color: t.text,
         }}>
           {isDarkMode ? '☀️' : '🌙'}
-          {isSidebarOpen && <span>โหมดมืด</span>}
+          {isSidebarOpen && <span style={{ color: t.subText }}>โหมดมืด</span>}
         </button>
 
         {/* Controls */}
@@ -151,24 +170,27 @@ export default function Sidebar() {
           padding: '12px',
           borderRadius: '6px',
           border: `1px solid ${t.border}`,
-          background: 'transparent',
+          background: t.surface,
           cursor: 'pointer',
           display: 'flex',
+          width: '100%',
           justifyContent: isSidebarOpen ? 'flex-start' : 'center',
           gap: '10px',
+          color: t.text,
         }}>
           {isSidebarOpen ? '◀ COLLAPSE' : '▶'}
         </button>
 
         <button onClick={handleLogout} style={{
-          marginTop: '6px',
+          marginTop: '10px',
           padding: '12px',
           borderRadius: '6px',
-          border: 'none',
-          background: 'rgba(239,68,68,0.1)',
-          color: '#f87171',
+          border: '1px solid rgba(239,68,68,0.35)',
+          background: isDarkMode ? 'rgba(239,68,68,0.10)' : 'rgba(239,68,68,0.08)',
+          color: isDarkMode ? '#ffb4b4' : '#b91c1c',
           cursor: 'pointer',
           display: 'flex',
+          width: '100%',
           justifyContent: isSidebarOpen ? 'flex-start' : 'center',
           gap: '10px',
         }}>
@@ -183,6 +205,7 @@ function NavItem({ icon, label, href, active, open, t, thaiFont, isDarkMode }: a
   return (
     <Link
       href={href}
+      title={open ? undefined : label}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -194,10 +217,13 @@ function NavItem({ icon, label, href, active, open, t, thaiFont, isDarkMode }: a
         background: active ? t.activeNav : 'transparent',
         gap: '12px',
         whiteSpace: 'nowrap',
+        border: active ? `1px solid ${t.borderStr}` : '1px solid transparent',
+        width: '100%',
+        boxSizing: 'border-box',
       }}
     >
-      <span>{icon}</span>
-      {open && <span style={{ fontFamily: thaiFont }}>{label}</span>}
+      <span style={{ color: active ? '#ff6b00' : t.text }}>{icon}</span>
+      {open && <span style={{ fontFamily: thaiFont, color: active ? '#ff6b00' : t.text }}>{label}</span>}
     </Link>
   )
 }

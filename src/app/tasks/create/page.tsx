@@ -72,7 +72,7 @@ export default function CreateTaskPage() {
     try {
       console.log("Sending Payload:", taskPayload)
       await addTask(taskPayload)
-      alert('สร้างภารกิจสำเร็จ!')
+      alert('สร้างงานสำเร็จ!')
       router.push('/') 
     } catch (error: any) {
       console.error("Create Task Error:", error)
@@ -89,7 +89,7 @@ export default function CreateTaskPage() {
 
         <div style={{ padding: '40px' }}>
           <header style={{ marginBottom: '30px' }}>
-            <div style={{ fontFamily: 'monospace', fontSize: '10px', color: t.accent, letterSpacing: '3px' }}>// MISSION_CREATION_UNIT</div>
+            <div style={{ fontFamily: 'monospace', fontSize: '10px', color: t.accent, letterSpacing: '3px' }}>// TASK_CREATION_UNIT</div>
             <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '48px', margin: '5px 0 0 0', letterSpacing: '1px' }}>NEW <span style={{ color: t.accent }}>TASK</span></h1>
           </header>
 
@@ -100,7 +100,7 @@ export default function CreateTaskPage() {
               <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>หัวข้องาน *</label>
               <input 
                 style={fieldStyle('title') as any} 
-                placeholder="ระบุชื่อภารกิจ..." 
+                placeholder="ระบุชื่องาน..." 
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
                 onFocus={() => setFocusedField('title')} 
@@ -192,7 +192,7 @@ export default function CreateTaskPage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>รายละเอียดภารกิจ</label>
+              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>รายละเอียดงาน</label>
               <textarea 
                 style={{ ...fieldStyle('desc'), minHeight: '100px', resize: 'none' } as any} 
                 placeholder="ระบุรายละเอียด..." 
@@ -220,7 +220,7 @@ export default function CreateTaskPage() {
                   boxShadow: isSubmitting ? 'none' : `0 0 20px ${t.accent}33` 
                 }}
               >
-                {isSubmitting ? 'กำลังเชื่อมต่อระบบ...' : '+ ยืนยันการสร้างภารกิจ'}
+                {isSubmitting ? 'กำลังเชื่อมต่อระบบ...' : '+ ยืนยันการสร้างงาน'}
               </button>
             </div>
           </form>

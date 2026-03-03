@@ -47,11 +47,11 @@ export default function DashboardPage() {
   }, [fetchTasks])
 
   /* =======================
-     Join Mission
+     Join Task
   ======================= */
   const handleJoin = async (task: Task) => {
     if (!currentUser) {
-      alert('กรุณาเข้าสู่ระบบก่อนเข้าร่วมภารกิจ')
+      alert('กรุณาเข้าสู่ระบบก่อนรับงาน')
       return
     }
 
@@ -62,12 +62,12 @@ export default function DashboardPage() {
     const maxCount = task.max_assignees || 1
 
     if (members.includes(currentUser.email)) {
-      alert('คุณเป็นสมาชิกของภารกิจนี้อยู่แล้ว')
+      alert('คุณรับงานนี้แล้ว')
       return
     }
 
     if (currentCount >= maxCount) {
-      alert('ขออภัย ภารกิจนี้เต็มแล้ว')
+      alert('ขออภัย งานนี้เต็มแล้ว')
       return
     }
 
@@ -98,7 +98,7 @@ export default function DashboardPage() {
      - ไม่แสดงงานที่สถานะ done
      - หน้าแรก “ทุกคนเห็นได้” แต่ปุ่มรับงานจะกดได้เฉพาะคนที่รับได้จริง
   ======================= */
-  const publicMissions = tasks.filter(task => {
+  const publicTasks = tasks.filter(task => {
     const currentCount = task.current_people ?? 0
     const maxCount = task.max_assignees ?? 1
     const hasSlot = currentCount < maxCount
@@ -130,7 +130,7 @@ export default function DashboardPage() {
           animation: 'spin 1s linear infinite'
         }} />
         <p style={{ marginTop: 20, fontFamily: engFont }}>
-          LOADING MISSIONS...
+          LOADING TASKS...
         </p>
       </div>
     )
@@ -163,10 +163,10 @@ export default function DashboardPage() {
             fontSize: 64,
             margin: 0
           }}>
-            PUBLIC <span style={{ color: t.accent }}>MISSIONS</span>
+            PUBLIC <span style={{ color: t.accent }}>TASKS</span>
           </h1>
           <p style={{ color: t.subText }}>
-            ค้นหาและรับภารกิจที่เหมาะสม
+            ค้นหาและรับงานที่เหมาะสม
           </p>
         </div>
 
@@ -181,7 +181,7 @@ export default function DashboardPage() {
             borderRadius: 14,
             cursor: 'pointer'
           }}>
-            + CREATE MISSION
+            + CREATE TASK
           </button>
         </Link>
       </div>
@@ -192,7 +192,7 @@ export default function DashboardPage() {
         gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
         gap: 30
       }}>
-        {publicMissions.map(task => (
+        {publicTasks.map(task => (
           (() => {
             const members = task.team_members || []
             const currentCount = task.current_people ?? members.length ?? 0
@@ -240,13 +240,13 @@ export default function DashboardPage() {
               }}
             >
               {!currentUser
-                ? 'LOGIN TO JOIN'
+                ? 'LOGIN TO ACCEPT'
                 : isOwner
-                  ? 'YOUR MISSION'
+                  ? 'YOUR TASK'
                   : isJoined
-                    ? 'ALREADY JOINED'
+                    ? 'ALREADY ACCEPTED'
                     : hasSlot
-                      ? 'JOIN MISSION +'
+                      ? 'ACCEPT TASK +'
                       : 'FULL'
               }
             </button>
@@ -256,13 +256,13 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {publicMissions.length === 0 && (
+      {publicTasks.length === 0 && (
         <p style={{
           marginTop: 80,
           textAlign: 'center',
           color: t.subText
         }}>
-          ไม่พบภารกิจใหม่
+          ไม่พบงานที่ขาดคน
         </p>
       )}
     </div>
