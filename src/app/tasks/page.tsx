@@ -82,15 +82,18 @@ export default function TasksPage() {
     // ย้ายข้ามคอลัมน์เท่านั้นที่ต้องยืนยัน
     if (fromStatus === toStatus) return
 
-    const labelMap: Record<Task['status'], string> = {
-      todo: 'TO DO',
-      doing: 'DOING',
-      done: 'DONE',
+    let message = `ยืนยันย้ายงาน "${task.title}" ใช่หรือไม่?`
+
+    // ข้อความเฉพาะกรณี
+    if (fromStatus === 'todo' && toStatus === 'doing') {
+      message = `ต้องการเริ่มทำงานนี้ใช่ไหม?\n\n"${task.title}"`
+    } else if (fromStatus === 'doing' && toStatus === 'done') {
+      message = `ยืนยันว่าทำงานนี้เสร็จแล้วใช่ไหม?\n\n"${task.title}"`
+    } else if (fromStatus === 'todo' && toStatus === 'done') {
+      message = `ต้องการข้ามไปเป็น "เสร็จแล้ว" ทันทีสำหรับงานนี้ใช่ไหม?\n\n"${task.title}"`
     }
 
-    const ok = confirm(
-      `ยืนยันย้ายงาน "${task.title}"\nจาก ${labelMap[fromStatus]} ไป ${labelMap[toStatus]} ?`
-    )
+    const ok = confirm(message)
     if (!ok) return
 
     // อัปเดตสถานะงาน

@@ -96,7 +96,7 @@ export default function DashboardPage() {
      Filter Public Missions
      - แสดงเฉพาะงานที่ยังขาดคน
      - ไม่แสดงงานที่สถานะ done
-     - ไม่แสดงงานที่เราร่วมอยู่แล้ว / เราเป็นคนสร้าง
+     - หน้าแรก “ทุกคนเห็นได้” แต่ปุ่มรับงานจะกดได้เฉพาะคนที่รับได้จริง
   ======================= */
   const publicMissions = tasks.filter(task => {
     const currentCount = task.current_people ?? 0
@@ -104,13 +104,7 @@ export default function DashboardPage() {
     const hasSlot = currentCount < maxCount
     const isNotDone = task.status !== 'done'
 
-    if (!hasSlot || !isNotDone) return false
-
-    if (!currentUser) return true
-
-    const isJoined = task.team_members?.includes(currentUser.email)
-    const isOwner = task.user_id === currentUser.id
-    return !isJoined && !isOwner
+    return hasSlot && isNotDone
   })
 
   /* =======================
@@ -199,6 +193,16 @@ export default function DashboardPage() {
         gap: 30
       }}>
         {publicMissions.map(task => (
+          (() => {
+            const members = task.team_members || []
+            const currentCount = task.current_people ?? members.length ?? 0
+            const maxCount = task.max_assignees ?? 1
+            const hasSlot = currentCount < maxCount
+            const isOwner = !!currentUser && task.user_id === currentUser.id
+            const isJoined = !!currentUser && members.includes(currentUser.email)
+            const canJoin = !!currentUser && hasSlot && !isOwner && !isJoined
+
+            return (
           <div
             key={task.id}
             style={{
@@ -217,9 +221,13 @@ export default function DashboardPage() {
               {task.description || 'ไม่มีรายละเอียด'}
             </p>
 
+            <p style={{ color: t.subText, fontSize: 12, marginTop: 0 }}>
+              👥 {currentCount}/{maxCount} คน {hasSlot ? `(ขาดอีก ${Math.max(0, maxCount - currentCount)} คน)` : '(เต็มแล้ว)'}
+            </p>
+
             <button
               onClick={() => handleJoin(task)}
-              disabled={joiningId === task.id}
+              disabled={joiningId === task.id || !canJoin}
               style={{
                 marginTop: 'auto',
                 background: t.accent,
@@ -227,12 +235,24 @@ export default function DashboardPage() {
                 padding: 14,
                 fontWeight: 900,
                 borderRadius: 12,
-                cursor: 'pointer'
+                cursor: (joiningId === task.id || !canJoin) ? 'not-allowed' : 'pointer',
+                opacity: (joiningId === task.id || !canJoin) ? 0.6 : 1,
               }}
             >
-              JOIN MISSION +
+              {!currentUser
+                ? 'LOGIN TO JOIN'
+                : isOwner
+                  ? 'YOUR MISSION'
+                  : isJoined
+                    ? 'ALREADY JOINED'
+                    : hasSlot
+                      ? 'JOIN MISSION +'
+                      : 'FULL'
+              }
             </button>
           </div>
+            )
+          })()
         ))}
       </div>
 

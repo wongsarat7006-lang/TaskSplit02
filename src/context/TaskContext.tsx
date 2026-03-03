@@ -106,13 +106,17 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession()
       console.log('[init] session:', session?.user?.email ?? 'no session')
       setCurrentUser(session?.user ?? null)
-      if (session) {
-        await Promise.all([fetchTasks(), fetchCategories(), fetchAllUsers()])
-      }
+      // หน้าแรกต้องเห็นงานได้แม้ยังไม่ล็อกอิน
+      await Promise.all([
+        fetchTasks(),
+        fetchCategories(),
+        session ? fetchAllUsers() : Promise.resolve(),
+      ])
       supabase.auth.onAuthStateChange(async (_event, session) => {
         console.log('[authChange]', _event)
         setCurrentUser(session?.user ?? null)
-        if (session) { await fetchTasks() } else { setTasks([]) }
+        // logout แล้วยังต้องเห็น public missions ต่อได้
+        await fetchTasks()
       })
       setLoading(false)
     }
