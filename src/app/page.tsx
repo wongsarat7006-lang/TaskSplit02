@@ -94,9 +94,20 @@ export default function DashboardPage() {
 
   /* =======================
      Filter Public Missions
+     - แสดงเฉพาะงานที่ยังขาดคน
+     - ไม่แสดงงานที่สถานะ done
+     - ไม่แสดงงานที่เราร่วมอยู่แล้ว / เราเป็นคนสร้าง
   ======================= */
   const publicMissions = tasks.filter(task => {
+    const currentCount = task.current_people ?? 0
+    const maxCount = task.max_assignees ?? 1
+    const hasSlot = currentCount < maxCount
+    const isNotDone = task.status !== 'done'
+
+    if (!hasSlot || !isNotDone) return false
+
     if (!currentUser) return true
+
     const isJoined = task.team_members?.includes(currentUser.email)
     const isOwner = task.user_id === currentUser.id
     return !isJoined && !isOwner

@@ -3,14 +3,12 @@
 import React from 'react'
 import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
-import { useTasks } from '../../context/TaskContext'
 
 export default function LayoutWrapper({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { isSidebarOpen } = useTasks()
   const pathname = usePathname()
 
   // ❗ ไม่แสดง Sidebar ในหน้า login / signup
@@ -30,8 +28,8 @@ export default function LayoutWrapper({
         width: '100%',
       }}
     >
-      {/* ✅ แสดง Sidebar เฉพาะตอนเปิด */}
-      {isSidebarOpen && <Sidebar />}
+      {/* ✅ Sidebar ใช้สถานะเปิด/ปิดภายในตัวเอง (ความกว้าง) */}
+      <Sidebar />
 
       {/* ✅ Content หลัก ไม่ต้องใช้ margin */}
       <main

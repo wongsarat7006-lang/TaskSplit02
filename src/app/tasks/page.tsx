@@ -9,7 +9,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 
 export default function TasksPage() {
   const router = useRouter()
-  const { tasks, categories, deleteTask, isDarkMode } = useTasks()
+  const { tasks, categories, deleteTask, updateTask, isDarkMode } = useTasks()
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filterPriority, setFilterPriority] = useState('all')
@@ -58,7 +58,47 @@ export default function TasksPage() {
     { id: 'done',  label: 'DONE',   emoji: '✅' },
   ]
 
-  const onDragEnd = (_: DropResult) => {}
+  const onDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId } = result
+
+    // ไม่มีปลายทาง (ลากแล้วปล่อยนอกคอลัมน์)
+    if (!destination) return
+
+    // ตำแหน่งเดิมเป๊ะ ๆ ไม่ต้องทำอะไร
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return
+    }
+
+    // หา task จาก id
+    const task = tasks.find(t => t.id === draggableId)
+    if (!task) return
+
+    const fromStatus = source.droppableId as Task['status']
+    const toStatus   = destination.droppableId as Task['status']
+
+    // ย้ายข้ามคอลัมน์เท่านั้นที่ต้องยืนยัน
+    if (fromStatus === toStatus) return
+
+    const labelMap: Record<Task['status'], string> = {
+      todo: 'TO DO',
+      doing: 'DOING',
+      done: 'DONE',
+    }
+
+    const ok = confirm(
+      `ยืนยันย้ายงาน "${task.title}"\nจาก ${labelMap[fromStatus]} ไป ${labelMap[toStatus]} ?`
+    )
+    if (!ok) return
+
+    // อัปเดตสถานะงาน
+    updateTask({
+      ...task,
+      status: toStatus,
+    })
+  }
 
   const inputStyle: React.CSSProperties = {
     padding: '10px 14px',
