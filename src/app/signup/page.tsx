@@ -9,6 +9,7 @@ export default function SignUpPage() {
   const [fullName, setFullName] = useState('') 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [focused, setFocused] = useState<string | null>(null)
 
@@ -19,6 +20,10 @@ export default function SignUpPage() {
     if (!fullName) return alert('กรุณากรอกชื่อ-นามสกุลด้วยครับ')
     if (password.length < 6) {
       alert('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษรครับ')
+      return
+    }
+    if (password !== confirmPassword) {
+      alert('รหัสผ่านและยืนยันรหัสผ่านไม่ตรงกัน')
       return
     }
 
@@ -117,6 +122,25 @@ export default function SignUpPage() {
               paddingLeft: "5px"
             }}>
               * อย่างน้อย 6 ตัวอักษร
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: "12px", color: "#ff6b00", paddingLeft: "5px" }}>CONFIRM PASSWORD</label>
+            <input 
+              type="password" placeholder="พิมพ์รหัสผ่านอีกครั้ง" required 
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              onFocus={() => setFocused("confirmPassword")} onBlur={() => setFocused(null)}
+              style={inputStyle("confirmPassword")}
+            />
+            <span style={{ 
+              fontSize: "11px", 
+              color: confirmPassword && confirmPassword !== password ? "#ff4d4d" : "#8a8a82",
+              paddingLeft: "5px"
+            }}>
+              {confirmPassword && confirmPassword !== password
+                ? "รหัสผ่านไม่ตรงกัน"
+                : "กรอกให้ตรงกับรหัสผ่านด้านบน"}
             </span>
           </div>
 

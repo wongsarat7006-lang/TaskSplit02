@@ -166,8 +166,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const members = task.team_members || []
     const currentCount = task.current_people || 0
     const maxCount = task.max_assignees || 1
-    if (members.includes(currentUser.email)) { alert('คุณเข้าร่วมภารกิจนี้แล้ว'); return }
-    if (currentCount >= maxCount) { alert('ภารกิจเต็มแล้ว'); return }
+    if (members.includes(currentUser.email)) { alert('คุณรับงานนี้แล้ว'); return }
+    if (currentCount >= maxCount) { alert('งานเต็มแล้ว'); return }
     const { error } = await supabase.from('tasks')
       .update({ current_people: currentCount + 1, team_members: [...members, currentUser.email] })
       .eq('id', task.id)

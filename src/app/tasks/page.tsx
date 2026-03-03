@@ -137,7 +137,7 @@ export default function TasksPage() {
             boxShadow: `0 0 20px ${t.accent}44`,
             letterSpacing: 1,
           }}>
-            + สร้างภารกิจ
+            + สร้างงาน
           </Link>
         </header>
 

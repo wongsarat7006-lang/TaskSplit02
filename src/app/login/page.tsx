@@ -4,6 +4,20 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 
+function getAuthErrorMessage(message?: string) {
+  const msg = (message || "").toLowerCase();
+
+  if (!msg) return "เกิดข้อผิดพลาดในการเข้าสู่ระบบ";
+
+  // Supabase common messages
+  if (msg.includes("invalid login credentials")) return "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+  if (msg.includes("email not confirmed")) return "กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ";
+  if (msg.includes("too many requests")) return "คุณลองหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่";
+  if (msg.includes("user not found")) return "ไม่พบผู้ใช้นี้ในระบบ";
+
+  return "เข้าสู่ระบบไม่สำเร็จ: " + (message || "Unknown error");
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -33,7 +47,7 @@ export default function LoginPage() {
       
     } catch (err: any) {
       console.error("Login Error:", err);
-      setError(err.message || "เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
+      setError(getAuthErrorMessage(err?.message));
       setLoading(false);
     }
   };
