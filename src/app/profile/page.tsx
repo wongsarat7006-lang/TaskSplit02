@@ -36,7 +36,7 @@ export default function ProfilePage() {
 
   // ⭐ ใช้ email ที่ล็อกอินจริง
   const myTasks =
-    tasks?.filter(task => task.userEmail === user?.email) || []
+   tasks?.filter(task => task.author_email === user?.email) || []
 
   const todoCount = myTasks.filter(t => t.status === 'todo').length
   const doingCount = myTasks.filter(t => t.status === 'doing').length

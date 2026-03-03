@@ -2,21 +2,18 @@ export type TaskStatus = 'todo' | 'doing' | 'done'
 
 /** Task ที่ดึงจาก DB */
 export type Task = {
-  id: number | string
+  id: string
   title: string
   description: string | null
   assignee: string | null
   status: TaskStatus
-  dueDate: string | null
+  due_date: string | null
 
-  // ✅ เพิ่ม: email ของผู้ที่เป็นเจ้าของ task
-  userEmail: string
+  author_email: string   // ✅ ตรงกับ DB
+  user_id: string        // ✅ ตรงกับ DB
 
-  // (ถ้ายังใช้ userId อยู่ เก็บไว้ได้)
-  userId: number | string
-
-  createdAt: string
-  updatedAt: string
+  created_at: string     // ✅ snake_case
+  updated_at: string     // ✅ snake_case
 }
 
 /** Task ตอนสร้างใหม่ (ยังไม่เข้าฐานข้อมูล) */
@@ -25,8 +22,7 @@ export type CreateTask = {
   description?: string
   assignee?: string
   status?: TaskStatus
-  dueDate?: string
+  due_date?: string
 
-  // ✅ เพิ่ม: ผูก task กับผู้ล็อกอิน
-  userEmail: string
+  author_email: string   // ✅ ตรงกับ DB
 }
