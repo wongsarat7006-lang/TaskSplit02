@@ -53,9 +53,9 @@ export default function TasksPage() {
   })
 
   const columns: { id: Task['status']; label: string; emoji: string }[] = [
-    { id: 'todo',  label: 'TO DO',  emoji: '📋' },
-    { id: 'doing', label: 'DOING',  emoji: '⚡' },
-    { id: 'done',  label: 'DONE',   emoji: '✅' },
+    { id: 'todo',  label: 'TO DO',  emoji: '' },
+    { id: 'doing', label: 'DOING',  emoji: '' },
+    { id: 'done',  label: 'DONE',   emoji: '' },
   ]
 
   const onDragEnd = (result: DropResult) => {
@@ -154,7 +154,7 @@ export default function TasksPage() {
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <select style={inputStyle as any} value={filterPriority} onChange={e => setFilterPriority(e.target.value)}>
-            <option value="all">🎯 ทุกระดับ</option>
+            <option value="all"> ทุกระดับ</option>
             <option value="high">🔴 สูง</option>
             <option value="medium">🟠 กลาง</option>
             <option value="low">🟢 ต่ำ</option>
