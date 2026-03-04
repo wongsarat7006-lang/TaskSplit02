@@ -77,7 +77,10 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     console.log('[fetchTasks] starting...')
     const { data, error } = await supabase
       .from('tasks')
-      .select('*, categories (name, color)')
+      // NOTE: เลี่ยงการ join categories ตรง ๆ เพราะ Supabase แจ้งว่า
+      // "more than one relationship was found for 'tasks' and 'categories'"
+      // จึงดึงเฉพาะ tasks ตรง ๆ แล้วให้ categories แยกจาก fetchCategories()
+      .select('*')
       .order('created_at', { ascending: false })
     console.log('[fetchTasks] data:', data)
     console.log('[fetchTasks] error:', error)
@@ -141,7 +144,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     console.log('[addTask] payload:', payload)
     const { data, error } = await supabase
       .from('tasks').insert(payload)
-      .select('*, categories (name, color)').single()
+      .select('*').single()
     console.log('[addTask] result:', data, error)
     if (error) throw error
     setTasks(prev => [data as Task, ...prev])
@@ -151,8 +154,11 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const { categories, ...clean } = task as any
     const { data, error } = await supabase
       .from('tasks').update(clean).eq('id', task.id)
-      .select('*, categories (name, color)').single()
-    if (error) throw error
+      .select('*').single()
+    if (error) {
+      console.error('[updateTask] ERROR:', error)
+      throw error
+    }
     setTasks(prev => prev.map(t => (t.id === task.id ? data : t)))
   }
 

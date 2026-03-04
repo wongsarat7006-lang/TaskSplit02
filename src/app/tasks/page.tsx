@@ -9,7 +9,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 
 export default function TasksPage() {
   const router = useRouter()
-  const { tasks, categories, deleteTask, updateTask, isDarkMode } = useTasks()
+  const { tasks, categories, deleteTask, updateTask, isDarkMode, currentUser } = useTasks()
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filterPriority, setFilterPriority] = useState('all')
@@ -45,7 +45,16 @@ export default function TasksPage() {
     high: 'สูง', medium: 'กลาง', low: 'ต่ำ'
   }
 
-  const filteredTasks = tasks.filter(task => {
+  // แสดงเฉพาะงานที่เกี่ยวกับผู้ใช้ปัจจุบัน (เป็นเจ้าของหรืออยู่ในทีม)
+  const myTasks = tasks.filter(task => {
+    if (!currentUser) return false
+    const isOwner = task.user_id === currentUser.id
+    const isTeamMember =
+      Array.isArray(task.team_members) && task.team_members.includes(currentUser.email)
+    return isOwner || isTeamMember
+  })
+
+  const filteredTasks = myTasks.filter(task => {
     const matchText     = task.title.toLowerCase().includes(searchTerm.toLowerCase())
     const matchPriority = filterPriority === 'all' || task.priority === filterPriority
     const matchCategory = filterCategory === 'all' || task.category_id === filterCategory
@@ -58,7 +67,7 @@ export default function TasksPage() {
     { id: 'done',  label: 'DONE',   emoji: '' },
   ]
 
-  const onDragEnd = (result: DropResult) => {
+  const onDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result
 
     // ไม่มีปลายทาง (ลากแล้วปล่อยนอกคอลัมน์)
@@ -97,10 +106,15 @@ export default function TasksPage() {
     if (!ok) return
 
     // อัปเดตสถานะงาน
-    updateTask({
-      ...task,
-      status: toStatus,
-    })
+    try {
+      await updateTask({
+        ...task,
+        status: toStatus,
+      })
+    } catch (err: any) {
+      console.error('[onDragEnd] updateTask error', err)
+      alert(err?.message || 'อัปเดตสถานะงานไม่สำเร็จ (อาจไม่มีสิทธิ์แก้ไขงานนี้)')
+    }
   }
 
   const inputStyle: React.CSSProperties = {
