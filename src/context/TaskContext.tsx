@@ -152,18 +152,29 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   const updateTask = async (task: Task) => {
     const { categories, ...clean } = task as any
-    const { data, error } = await supabase
-      .from('tasks').update(clean).eq('id', task.id)
-      .select('*').single()
+    const { error } = await supabase
+      .from('tasks')
+      .update(clean)
+      .eq('id', task.id)
+
     if (error) {
       console.error('[updateTask] ERROR:', error)
       throw error
     }
-    setTasks(prev => prev.map(t => (t.id === task.id ? data : t)))
+
+    // อัปเดต state ฝั่ง client ตามค่าที่ส่งเข้าไป (optimistic update)
+    setTasks(prev => prev.map(t => (t.id === task.id ? { ...t, ...task } : t)))
   }
 
   const deleteTask = async (id: string) => {
-    await supabase.from('tasks').delete().eq('id', id)
+    const { error } = await supabase.from('tasks').delete().eq('id', id)
+
+    if (error) {
+      console.error('[deleteTask] ERROR:', error)
+      alert(error.message || 'ไม่สามารถลบงานนี้ได้ (อาจไม่มีสิทธิ์ลบ)')
+      return
+    }
+
     setTasks(prev => prev.filter(t => t.id !== id))
   }
 

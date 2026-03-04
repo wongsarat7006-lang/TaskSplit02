@@ -217,26 +217,29 @@ export default function TasksPage() {
                     </div>
 
                     {/* Cards */}
-                    {colTasks.map((task, index) => (
-                      <Draggable key={task.id} draggableId={task.id} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                          >
-                            <TaskCard
-                              task={task}
-                              t={t}
-                              priorityColor={priorityColor}
-                              priorityLabel={priorityLabel}
-                              isDragging={snapshot.isDragging}
-                              onDelete={() => { if (confirm('ลบงานนี้?')) deleteTask(task.id) }}
-                            />
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
+                    {colTasks.map((task, index) => {
+                      const isOwner = currentUser && task.user_id === currentUser.id
+                      return (
+                        <Draggable key={task.id} draggableId={task.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                            >
+                              <TaskCard
+                                task={task}
+                                t={t}
+                                priorityColor={priorityColor}
+                                priorityLabel={priorityLabel}
+                                isDragging={snapshot.isDragging}
+                                onDelete={isOwner ? () => { if (confirm('ลบงานนี้?')) deleteTask(task.id) } : undefined}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      )
+                    })}
 
                     {colTasks.length === 0 && (
                       <div style={{ textAlign: 'center', color: t.subText, fontSize: 13, marginTop: 60, opacity: 0.5 }}>
@@ -265,7 +268,7 @@ function TaskCard({
   priorityColor: Record<string, string>
   priorityLabel: Record<string, string>
   isDragging: boolean
-  onDelete: () => void
+  onDelete?: () => void
 }) {
   const pColor = priorityColor[task.priority] || '#888'
 
@@ -305,12 +308,14 @@ function TaskCard({
             borderRadius: 6, textDecoration: 'none',
             color: '#ff6b00',
           }}>✏️</Link>
-          <button onClick={onDelete} style={{
-            fontSize: 13, padding: '3px 8px',
-            background: 'rgba(255,60,60,0.1)',
-            border: 'none', borderRadius: 6,
-            cursor: 'pointer', color: '#ff4444',
-          }}>🗑️</button>
+          {onDelete && (
+            <button onClick={onDelete} style={{
+              fontSize: 13, padding: '3px 8px',
+              background: 'rgba(255,60,60,0.1)',
+              border: 'none', borderRadius: 6,
+              cursor: 'pointer', color: '#ff4444',
+            }}>🗑️</button>
+          )}
         </div>
       </div>
 
