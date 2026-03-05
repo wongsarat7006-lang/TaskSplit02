@@ -55,6 +55,7 @@ interface TaskContextType {
   updateTask: (task: Task) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   joinTask: (task: Task) => Promise<void>
+  leaveTask: (task: Task) => Promise<void>
   fetchComments: (taskId: string) => Promise<any[]>
   addComment: (taskId: string, content: string, author: string) => Promise<{ data: any; error: any }>
 }
@@ -238,6 +239,37 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     await fetchTasks()
   }
 
+  const leaveTask = async (task: Task) => {
+    if (!currentUser) {
+      alert('กรุณาเข้าสู่ระบบ')
+      return
+    }
+    if (task.user_id === currentUser.id) {
+      alert('เจ้าของงานไม่สามารถกดไม่รับงานได้ (งานยังเป็นของคุณอยู่)')
+      return
+    }
+    const members = task.team_members || []
+    if (!members.includes(currentUser.email)) {
+      alert('คุณไม่ได้รับงานนี้อยู่แล้ว')
+      return
+    }
+    const newMembers = members.filter((email: string) => email !== currentUser.email)
+    const currentCount = task.current_people ?? members.length
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        team_members: newMembers,
+        current_people: Math.max(0, currentCount - 1),
+      })
+      .eq('id', task.id)
+    if (error) {
+      console.error('[leaveTask] ERROR:', error)
+      alert(error.message || 'ยกเลิกการรับงานไม่สำเร็จ')
+      return
+    }
+    await fetchTasks()
+  }
+
   const fetchComments = async (taskId: string) => {
     const { data } = await supabase.from('task_comments').select('*')
       .eq('task_id', taskId).order('created_at')
@@ -255,7 +287,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       tasks, categories, allUsers, loading, currentUser,
       isDarkMode, isSidebarOpen,
       toggleDarkMode, toggleSidebar, setSidebarOpen,
-      fetchTasks, addTask, updateTask, deleteTask, joinTask,
+      fetchTasks, addTask, updateTask, deleteTask, joinTask, leaveTask,
       fetchComments, addComment
     }}>
       {children}

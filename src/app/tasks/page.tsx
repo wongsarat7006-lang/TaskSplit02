@@ -9,7 +9,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 
 export default function TasksPage() {
   const router = useRouter()
-  const { tasks, categories, deleteTask, updateTask, isDarkMode, currentUser } = useTasks()
+  const { tasks, categories, deleteTask, updateTask, leaveTask, isDarkMode, currentUser } = useTasks()
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filterPriority, setFilterPriority] = useState('all')
@@ -219,6 +219,11 @@ export default function TasksPage() {
                     {/* Cards */}
                     {colTasks.map((task, index) => {
                       const isOwner = currentUser && task.user_id === currentUser.id
+                      const isJoined =
+                        currentUser &&
+                        !isOwner &&
+                        Array.isArray(task.team_members) &&
+                        task.team_members.includes(currentUser.email)
                       return (
                         <Draggable key={task.id} draggableId={task.id} index={index}>
                           {(provided, snapshot) => (
@@ -234,6 +239,13 @@ export default function TasksPage() {
                                 priorityLabel={priorityLabel}
                                 isDragging={snapshot.isDragging}
                                 onDelete={isOwner ? () => { if (confirm('ลบงานนี้?')) deleteTask(task.id) } : undefined}
+                                onLeave={
+                                  isJoined
+                                    ? () => {
+                                        if (confirm('ยืนยันไม่รับงานนี้แล้ว? งานจะยังอยู่และคนอื่นรับได้')) leaveTask(task)
+                                      }
+                                    : undefined
+                                }
                               />
                             </div>
                           )}
@@ -261,7 +273,7 @@ export default function TasksPage() {
 }
 
 function TaskCard({
-  task, t, priorityColor, priorityLabel, isDragging, onDelete
+  task, t, priorityColor, priorityLabel, isDragging, onDelete, onLeave
 }: {
   task: Task
   t: any
@@ -269,6 +281,7 @@ function TaskCard({
   priorityLabel: Record<string, string>
   isDragging: boolean
   onDelete?: () => void
+  onLeave?: () => void
 }) {
   const pColor = priorityColor[task.priority] || '#888'
 
@@ -347,18 +360,37 @@ function TaskCard({
         </span>
       )}
 
-      {/* Footer */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-        {task.due_date ? (
-          <span style={{ fontSize: 11, color: t.subText }}>
-            📅 {new Date(task.due_date).toLocaleDateString('th-TH')}
-          </span>
-        ) : <span />}
-
-        {task.team_members && task.team_members.length > 0 && (
-          <span style={{ fontSize: 11, color: t.subText }}>
-            👥 {task.current_people || 1}/{task.max_assignees || 1}
-          </span>
+      {/* Footer: วันที่ + จำนวนคน + ปุ่มไม่รับงานแล้ว */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {task.due_date && (
+            <span style={{ fontSize: 11, color: t.subText }}>
+              📅 {new Date(task.due_date).toLocaleDateString('th-TH')}
+            </span>
+          )}
+          {task.team_members && task.team_members.length > 0 && (
+            <span style={{ fontSize: 11, color: t.subText }}>
+              👥 {task.current_people || 1}/{task.max_assignees || 1}
+            </span>
+          )}
+        </div>
+        {onLeave && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onLeave() }}
+            style={{
+              fontSize: 11,
+              padding: '4px 10px',
+              background: 'rgba(148, 163, 184, 0.2)',
+              border: `1px solid ${t.border}`,
+              borderRadius: 8,
+              color: t.subText,
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            ไม่รับงานแล้ว
+          </button>
         )}
       </div>
     </div>
