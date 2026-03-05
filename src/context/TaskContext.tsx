@@ -155,6 +155,12 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const previous = tasks.find(t => t.id === task.id)
 
     const { categories, ...clean } = task as any
+
+    // กันเคส due_date เป็น string ว่าง ซึ่ง Postgres (timestamptz) ไม่ยอมรับ
+    if (clean.due_date === '') {
+      clean.due_date = null
+    }
+
     const { error } = await supabase
       .from('tasks')
       .update(clean)

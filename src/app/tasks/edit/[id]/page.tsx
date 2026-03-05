@@ -98,8 +98,9 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
       await updateTask(formData as any)
       alert('บันทึกการแก้ไขสำเร็จ')
       router.push('/tasks')
-    } catch {
-      alert('ไม่สามารถบันทึกการแก้ไขได้')
+    } catch (err: any) {
+      console.error('[EditTaskPage] updateTask error', err)
+      alert(err?.message || 'ไม่สามารถบันทึกการแก้ไขได้')
     } finally {
       setIsSubmitting(false)
     }
@@ -228,6 +229,45 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
           <button onClick={handleSendComment} style={{ marginTop: '10px' }}>
             SEND
           </button>
+        </div>
+
+        {/* HISTORY / CHANGE LOGS */}
+        <div style={{ marginTop: '40px' }}>
+          <h3>HISTORY</h3>
+          {taskLogs.length === 0 && (
+            <div style={{ color: t.subText, fontSize: 13 }}>
+              ยังไม่มีบันทึกการแก้ไขงานนี้
+            </div>
+          )}
+
+          {taskLogs.map((log, index) => (
+            <div
+              key={index}
+              style={{
+                padding: '10px 0',
+                borderBottom: `1px dashed ${t.border}`,
+                fontSize: 13,
+              }}
+            >
+              <div style={{ fontWeight: 600 }}>
+                ฟิลด์ <span style={{ color: '#ff6b00' }}>{log.field}</span>{' '}
+                ถูกแก้ไข
+              </div>
+              <div style={{ color: t.subText }}>
+                จาก: <span style={{ textDecoration: 'line-through' }}>{log.old_value ?? '-'}</span>{' '}
+                เป็น: <span>{log.new_value ?? '-'}</span>
+              </div>
+              {log.changed_at && (
+                <div style={{ color: t.subText, fontSize: 12, marginTop: 2 }}>
+                  เวลา:{' '}
+                  {new Date(log.changed_at).toLocaleString('th-TH', {
+                    dateStyle: 'short',
+                    timeStyle: 'short',
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </main>
