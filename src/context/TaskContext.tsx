@@ -129,6 +129,15 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   const addTask = async (taskData: any) => {
     if (!currentUser) throw new Error('Not authenticated')
+
+    // รวมสมาชิกทีมจากหน้าสร้างงาน + ผู้สร้างเองเสมอ
+    const inputMembers: string[] = Array.isArray(taskData.team_members)
+      ? taskData.team_members
+      : []
+    const members = Array.from(
+      new Set([currentUser.email, ...inputMembers])
+    )
+
     const payload = {
       title: taskData.title,
       description: taskData.description,
@@ -139,8 +148,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       user_id: currentUser.id,
       author_email: currentUser.email,
       max_assignees: taskData.max_assignees || 1,
-      current_people: 1,
-      team_members: [currentUser.email]
+      current_people: taskData.current_people ?? members.length,
+      team_members: members,
     }
     console.log('[addTask] payload:', payload)
     const { data, error } = await supabase
