@@ -108,6 +108,41 @@ export default function CreateTaskPage() {
               />
             </div>
 
+            {/* ความสำคัญของงาน */}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>ความสำคัญของงาน</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {[
+                  { id: 'high',   label: 'สำคัญมาก',   color: '#ef4444' },
+                  { id: 'medium', label: 'ปานกลาง',    color: '#f97316' },
+                  { id: 'low',    label: 'ไม่เร่งด่วน', color: '#22c55e' },
+                ].map(option => {
+                  const active = formData.priority === option.id
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, priority: option.id as 'high' | 'medium' | 'low' })}
+                      style={{
+                        flex: 1,
+                        padding: '8px 10px',
+                        borderRadius: 999,
+                        border: active ? `1px solid ${option.color}` : `1px solid ${t.border}`,
+                        background: active ? `${option.color}22` : 'transparent',
+                        color: active ? option.color : t.subText,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             {/* หัวหน้างาน */}
             <div style={{ position: 'relative' }}>
               <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>หัวหน้างาน (Lead Agent)</label>
