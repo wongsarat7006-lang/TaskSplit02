@@ -11,9 +11,6 @@ export default function TasksPage() {
   const router = useRouter()
   const { tasks, categories, deleteTask, updateTask, leaveTask, isDarkMode, currentUser } = useTasks()
 
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filterPriority, setFilterPriority] = useState('all')
-  const [filterCategory, setFilterCategory] = useState('all')
   const [hasMounted, setHasMounted] = useState(false)
 
   useEffect(() => {
@@ -54,12 +51,8 @@ export default function TasksPage() {
     return isOwner || isTeamMember
   })
 
-  const filteredTasks = myTasks.filter(task => {
-    const matchText     = task.title.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchPriority = filterPriority === 'all' || task.priority === filterPriority
-    const matchCategory = filterCategory === 'all' || task.category_id === filterCategory
-    return matchText && matchPriority && matchCategory
-  })
+  // ตอนนี้ไม่ต้องมีระบบค้นหา/กรองพิเศษ ใช้เฉพาะงานของฉันทั้งหมด
+  const filteredTasks = myTasks
 
   const columns: { id: Task['status']; label: string; emoji: string }[] = [
     { id: 'todo',  label: 'TO DO',  emoji: '' },
@@ -117,17 +110,6 @@ export default function TasksPage() {
     }
   }
 
-  const inputStyle: React.CSSProperties = {
-    padding: '10px 14px',
-    background: t.card,
-    border: `1px solid ${t.border}`,
-    borderRadius: 8,
-    color: t.text,
-    fontSize: 13,
-    outline: 'none',
-    fontFamily: "'Sarabun', sans-serif",
-  }
-
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <main style={{ minHeight: '100vh', background: t.bg, padding: '32px 40px', fontFamily: "'Sarabun', sans-serif" }}>
@@ -154,26 +136,6 @@ export default function TasksPage() {
             + สร้างงาน
           </Link>
         </header>
-
-        {/* Search & Filter */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 28, flexWrap: 'wrap' }}>
-          <input
-            style={{ ...inputStyle, flex: 1, minWidth: 200 }}
-            placeholder="🔍 ค้นหางาน..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
-          <select style={inputStyle as any} value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
-            <option value="all">📁 ทุกหมวด</option>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <select style={inputStyle as any} value={filterPriority} onChange={e => setFilterPriority(e.target.value)}>
-            <option value="all"> ทุกระดับ</option>
-            <option value="high">🔴 สูง</option>
-            <option value="medium">🟠 กลาง</option>
-            <option value="low">🟢 ต่ำ</option>
-          </select>
-        </div>
 
         {/* Board */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
@@ -285,6 +247,26 @@ function TaskCard({
 }) {
   const pColor = priorityColor[task.priority] || '#888'
 
+  // คำนวณจำนวนวันที่เหลือถึงกำหนดส่ง
+  let daysLeftText: string | null = null
+  if (task.due_date) {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const due = new Date(task.due_date)
+    due.setHours(0, 0, 0, 0)
+    const diffDays = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (diffDays > 1) {
+      daysLeftText = `เหลือ ${diffDays} วัน`
+    } else if (diffDays === 1) {
+      daysLeftText = 'เหลือ 1 วัน'
+    } else if (diffDays === 0) {
+      daysLeftText = 'กำหนดวันนี้'
+    } else {
+      daysLeftText = `เลยกำหนด ${Math.abs(diffDays)} วัน`
+    }
+  }
+
   return (
     <div style={{
       background: t.card,
@@ -366,6 +348,7 @@ function TaskCard({
           {task.due_date && (
             <span style={{ fontSize: 11, color: t.subText }}>
               📅 {new Date(task.due_date).toLocaleDateString('th-TH')}
+              {daysLeftText ? ` • ${daysLeftText}` : ''}
             </span>
           )}
           {task.team_members && task.team_members.length > 0 && (

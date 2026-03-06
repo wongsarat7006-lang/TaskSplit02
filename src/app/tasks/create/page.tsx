@@ -31,6 +31,9 @@ export default function CreateTaskPage() {
     inputBg: '#0d0d0d'
   }
 
+  // จำกัดวันให้เลือกได้ตั้งแต่วันนี้เป็นต้นไป
+  const todayStr = new Date().toISOString().split('T')[0]
+
   const fieldStyle = (name: string) => ({
     width: '100%', 
     padding: '12px 16px',
@@ -219,6 +222,7 @@ export default function CreateTaskPage() {
                 <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>กำหนดส่ง (Deadline)</label>
                 <input 
                   type="date" 
+                  min={todayStr}
                   style={{ ...fieldStyle('date'), colorScheme: 'dark' } as any} 
                   value={formData.dueDate}
                   onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
