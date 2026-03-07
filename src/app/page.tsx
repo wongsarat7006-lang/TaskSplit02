@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useTasks } from '../context/TaskContext'
 
 export default function DashboardPage() {
@@ -10,7 +11,10 @@ export default function DashboardPage() {
     fetchTasks,
     loading,
     isDarkMode, // ⬅️ ใช้โหมดจาก Context
+    currentUser,
+    allUsers,
   } = useTasks()
+  const router = useRouter()
 
   /* =======================
      Theme Configuration
@@ -41,6 +45,16 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchTasks?.()
   }, [fetchTasks])
+
+  // จำกัดสิทธิ์: ถ้าเป็นพนักงานทั่วไปให้ไปที่ Task Board
+  const me = allUsers.find((u: any) => u.id === currentUser?.id)
+  const isAdmin = me?.role === 'admin'
+
+  useEffect(() => {
+    if (currentUser && !isAdmin) {
+      router.replace('/tasks')
+    }
+  }, [currentUser, isAdmin, router])
 
   /* =======================
      Group Tasks for Overview

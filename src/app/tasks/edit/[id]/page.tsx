@@ -60,15 +60,22 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
+  const me = allUsers?.find((u: any) => u.id === currentUser?.id)
+  const isAdmin = me?.role === 'admin'
+
   // -------------------- LOAD DATA --------------------
   useEffect(() => {
     const loadData = async () => {
       const taskToEdit = tasks.find(t => t.id === taskId)
       if (!taskToEdit) return
-      if (taskToEdit.user_id && currentUser?.id && taskToEdit.user_id !== currentUser.id) {
-        alert('มีสิทธิ์แก้ไขได้เฉพาะผู้สร้างงานเท่านั้น')
-        router.replace('/tasks')
-        return
+      // รอ allUsers โหลดก่อน แล้วค่อยเช็คสิทธิ์
+      if (allUsers && allUsers.length > 0) {
+        const myProfile = allUsers.find((u: any) => u.id === currentUser?.id)
+        if (myProfile && myProfile.role !== 'admin') {
+          alert('อนุญาตให้แก้ไขงานได้เฉพาะหัวหน้างาน / แอดมิน เท่านั้น')
+          router.replace('/tasks')
+          return
+        }
       }
 
       const anyTask: any = taskToEdit
@@ -97,7 +104,7 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
     }
 
     if (taskId && tasks.length > 0) loadData()
-  }, [taskId, tasks, currentUser])
+  }, [taskId, tasks, currentUser, allUsers, router])
 
   // -------------------- SUBMIT --------------------
   const handleSubmit = async (e: React.FormEvent) => {

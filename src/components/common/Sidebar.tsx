@@ -12,6 +12,8 @@ export default function Sidebar() {
     toggleSidebar,
     isDarkMode,
     toggleDarkMode,
+    currentUser,
+    allUsers,
   } = useTasks()
 
   const pathname = usePathname()
@@ -46,6 +48,9 @@ export default function Sidebar() {
   const thaiFont = "'Sarabun', sans-serif"
   const engFont  = "'Bebas Neue', 'Impact', sans-serif"
   const monoFont = "'Courier New', monospace"
+
+  const me = allUsers.find((u: any) => u.id === currentUser?.id)
+  const isAdmin = me?.role === 'admin'
 
   return (
     <aside
@@ -145,9 +150,50 @@ export default function Sidebar() {
 
         {/* Nav */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <NavItem href="/" icon="⊞" label="หน้าแรก" active={pathname === '/'} open={isSidebarOpen} t={t} thaiFont={thaiFont} isDarkMode={isDarkMode} />
-          <NavItem href="/tasks" icon="▦" label="Task Board" active={pathname === '/tasks'} open={isSidebarOpen} t={t} thaiFont={thaiFont} isDarkMode={isDarkMode} />
-          <NavItem href="/profile" icon="◉" label="โปรไฟล์" active={pathname === '/profile'} open={isSidebarOpen} t={t} thaiFont={thaiFont} isDarkMode={isDarkMode} />
+          {isAdmin && (
+            <NavItem
+              href="/"
+              icon="⊞"
+              label="Overview"
+              active={pathname === '/'}
+              open={isSidebarOpen}
+              t={t}
+              thaiFont={thaiFont}
+              isDarkMode={isDarkMode}
+            />
+          )}
+          <NavItem
+            href="/tasks"
+            icon="▦"
+            label="Tasks"
+            active={pathname === '/tasks'}
+            open={isSidebarOpen}
+            t={t}
+            thaiFont={thaiFont}
+            isDarkMode={isDarkMode}
+          />
+          <NavItem
+            href="/profile"
+            icon="◉"
+            label="Profile"
+            active={pathname === '/profile'}
+            open={isSidebarOpen}
+            t={t}
+            thaiFont={thaiFont}
+            isDarkMode={isDarkMode}
+          />
+          {isAdmin && (
+            <NavItem
+              href="/employees"
+              icon="👥"
+              label="Employees"
+              active={pathname === '/employees'}
+              open={isSidebarOpen}
+              t={t}
+              thaiFont={thaiFont}
+              isDarkMode={isDarkMode}
+            />
+          )}
         </nav>
 
         <div style={{ flex: 1 }} />

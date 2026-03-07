@@ -9,7 +9,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 
 export default function TasksPage() {
   const router = useRouter()
-  const { tasks, categories, deleteTask, updateTask, leaveTask, isDarkMode, currentUser } = useTasks()
+  const { tasks, categories, deleteTask, updateTask, leaveTask, isDarkMode, currentUser, allUsers } = useTasks()
 
   const [hasMounted, setHasMounted] = useState(false)
 
@@ -23,6 +23,9 @@ export default function TasksPage() {
   }, [router])
 
   if (!hasMounted) return null
+
+  const me = allUsers.find((u: any) => u.id === currentUser?.id)
+  const isAdmin = me?.role === 'admin'
 
   const t = {
     bg:      isDarkMode ? '#0a0a0a' : '#f4f4f0',
@@ -122,19 +125,21 @@ export default function TasksPage() {
               MY <span style={{ color: t.accent }}>TASKS</span>
             </h1>
           </div>
-          <Link href="/tasks/create" style={{
-            padding: '12px 24px',
-            background: t.accent,
-            color: '#000',
-            borderRadius: 10,
-            fontWeight: 900,
-            fontSize: 14,
-            textDecoration: 'none',
-            boxShadow: `0 0 20px ${t.accent}44`,
-            letterSpacing: 1,
-          }}>
-            + สร้างงาน
-          </Link>
+          {isAdmin && (
+            <Link href="/tasks/create" style={{
+              padding: '12px 24px',
+              background: t.accent,
+              color: '#000',
+              borderRadius: 10,
+              fontWeight: 900,
+              fontSize: 14,
+              textDecoration: 'none',
+              boxShadow: `0 0 20px ${t.accent}44`,
+              letterSpacing: 1,
+            }}>
+              + สร้างงาน
+            </Link>
+          )}
         </header>
 
         {/* Board */}
@@ -179,10 +184,8 @@ export default function TasksPage() {
                     </div>
 
                     {/* Cards */}
-                    {colTasks.map((task, index) => {
-                      const isOwner = currentUser && task.user_id === currentUser.id
-                      return (
-                        <Draggable key={task.id} draggableId={task.id} index={index}>
+                    {colTasks.map((task, index) => (
+                        <Draggable key={task.id} draggableId={task.id} index={index} isDragDisabled={!isAdmin}>
                           {(provided, snapshot) => (
                             <div
                               ref={provided.innerRef}
@@ -195,14 +198,13 @@ export default function TasksPage() {
                                 priorityColor={priorityColor}
                                 priorityLabel={priorityLabel}
                                 isDragging={snapshot.isDragging}
-                                canEdit={!!isOwner}
-                                onDelete={isOwner ? () => { if (confirm('ลบงานนี้?')) deleteTask(task.id) } : undefined}
+                                canEdit={isAdmin}
+                                onDelete={isAdmin ? () => { if (confirm('ลบงานนี้?')) deleteTask(task.id) } : undefined}
                               />
                             </div>
                           )}
                         </Draggable>
-                      )
-                    })}
+                    ))}
 
                     {colTasks.length === 0 && (
                       <div style={{ textAlign: 'center', color: t.subText, fontSize: 13, marginTop: 60, opacity: 0.5 }}>

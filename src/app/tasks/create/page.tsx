@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTasks } from '../../../context/TaskContext'
 
@@ -28,6 +28,9 @@ export default function CreateTaskPage() {
     (_, idx) => formData.team_members[idx] || ''
   )
 
+  const me = allUsers?.find((u: any) => u.id === currentUser?.id)
+  const isAdmin = me?.role === 'admin'
+
   const t = {
     bg: '#0a0a0a',
     card: '#0f0f0f',
@@ -54,6 +57,14 @@ export default function CreateTaskPage() {
     color: t.text,
     transition: 'all 0.2s ease',
   })
+
+  // จำกัดสิทธิ์: ถ้าเป็นพนักงานทั่วไปให้กลับไปหน้า Task Board
+  useEffect(() => {
+    if (currentUser && !isAdmin) {
+      alert('อนุญาตให้สร้างงานได้เฉพาะหัวหน้างาน / แอดมิน เท่านั้น')
+      router.replace('/tasks')
+    }
+  }, [currentUser, isAdmin, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -37,6 +37,7 @@ export interface Profile {
   full_name?: string
   email?: string
   avatar_url?: string
+  role?: 'admin' | 'employee' | null
 }
 
 interface TaskContextType {
@@ -99,7 +100,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const fetchAllUsers = useCallback(async () => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, email, avatar_url')
+      .select('id, full_name, email, avatar_url, role')
     console.log('[fetchAllUsers]', data, error)
     if (data) setAllUsers(data as Profile[])
   }, [])
@@ -145,6 +146,13 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const addTask = async (taskData: any) => {
     if (!currentUser) throw new Error('Not authenticated')
 
+    // ตรวจสิทธิ์: อนุญาตให้สร้างงานได้เฉพาะผู้ที่มี role เป็น admin
+    const me = allUsers.find(u => u.id === currentUser.id || u.email === currentUser.email)
+    if (me && me.role !== 'admin') {
+      alert('อนุญาตให้สร้างงานได้เฉพาะหัวหน้างาน / แอดมิน เท่านั้น')
+      throw new Error('FORBIDDEN_CREATE_TASK')
+    }
+
     // รวมสมาชิกทีมจากหน้าสร้างงาน + ผู้สร้างเองเสมอ
     const inputMembers: string[] = Array.isArray(taskData.team_members)
       ? taskData.team_members
@@ -181,10 +189,11 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     // หา task เดิมเพื่อใช้เปรียบเทียบสำหรับ log
     const previous = tasks.find(t => t.id === task.id)
 
-    // อนุญาตให้แก้ไขได้เฉพาะผู้สร้างงานเท่านั้น
-    if (previous && previous.user_id && currentUser?.id && previous.user_id !== currentUser.id) {
-      alert('คุณไม่มีสิทธิ์แก้ไขงานนี้ (เฉพาะผู้สร้างงานเท่านั้น)')
-      throw new Error('FORBIDDEN_NOT_OWNER')
+    // อนุญาตให้แก้ไขได้เฉพาะ admin เท่านั้น
+    const me = allUsers.find(u => u.id === currentUser?.id || u.email === currentUser?.email)
+    if (me && me.role !== 'admin') {
+      alert('อนุญาตให้แก้ไขงานได้เฉพาะหัวหน้างาน / แอดมิน เท่านั้น')
+      throw new Error('FORBIDDEN_NOT_ADMIN')
     }
 
     const { categories, ...clean } = task as any
@@ -246,6 +255,11 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   }
 
   const deleteTask = async (id: string) => {
+    const me = allUsers.find(u => u.id === currentUser?.id || u.email === currentUser?.email)
+    if (me && me.role !== 'admin') {
+      alert('อนุญาตให้ลบงานได้เฉพาะหัวหน้างาน / แอดมิน เท่านั้น')
+      throw new Error('FORBIDDEN_NOT_ADMIN')
+    }
     const { error } = await supabase.from('tasks').delete().eq('id', id)
 
     if (error) {
