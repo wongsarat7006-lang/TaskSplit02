@@ -1,0 +1,26 @@
+# กำหนด Stages ตามเกณฑ์ (อย่างน้อย 1 stage คือ deploy)
+stages:
+  - build
+  - deploy
+
+# 1. Stage สำหรับตรวจสอบว่า Code ของเรา Build ผ่านไหม
+build_project:
+  stage: build
+  image: node:18-alpine
+  script:
+    - npm install
+    - npm run build
+  only:
+    - main  # ให้ทำงานเฉพาะตอน merge เข้ากิ่งหลัก
+
+# 2. Stage สำหรับ Deploy ไปยัง Vercel
+deploy_vercel:
+  stage: deploy
+  image: node:18-alpine
+  script:
+    - npm install --global vercel
+    - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+    - vercel build --prod --token=$VERCEL_TOKEN
+    - vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+  only:
+    - main
