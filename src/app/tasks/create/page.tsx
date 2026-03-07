@@ -56,7 +56,19 @@ export default function CreateTaskPage() {
 
     setIsSubmitting(true)
 
-    const finalTeam = Array.from(new Set([currentUser.email, ...formData.team_members]))
+    const expectedSlots = Math.max(0, (formData.max_assignees || 1) - 1)
+    const memberInputs = (formData.team_members || []).slice(0, expectedSlots).map(m => String(m ?? '').trim()).filter(Boolean)
+    if (memberInputs.length !== expectedSlots) {
+      setIsSubmitting(false)
+      return alert(`กรุณาเลือกสมาชิกให้ครบ ${expectedSlots} คน`)
+    }
+    const uniqueInputs = Array.from(new Set(memberInputs.map(m => m.toLowerCase())))
+    if (uniqueInputs.length !== memberInputs.length) {
+      setIsSubmitting(false)
+      return alert('มีสมาชิกซ้ำ กรุณาตรวจสอบอีกครั้ง')
+    }
+
+    const finalTeam = Array.from(new Set([currentUser.email, ...memberInputs]))
 
     // ✅ ลบ author_email ออก เพราะไม่มีคอลัมน์นี้ใน Supabase
     const taskPayload = {
@@ -166,48 +178,23 @@ export default function CreateTaskPage() {
               <div style={{ position: 'absolute', right: '15px', top: '38px', color: t.accent, pointerEvents: 'none' }}>▼</div>
             </div>
 
-            {/* เพิ่มสมาชิกทีม */}
-            <div style={{ position: 'relative' }}>
-              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>เพิ่มสมาชิกทีม (Team Members)</label>
-              <select 
-                style={{ ...fieldStyle('team'), appearance: 'none', cursor: 'pointer' } as any}
-                onChange={(e) => {
-                  const email = e.target.value;
-                  if (email && !formData.team_members.includes(email)) {
-                    setFormData({...formData, team_members: [...formData.team_members, email]})
-                  }
-                }}
-                onFocus={() => setFocusedField('team')}
-                onBlur={() => setFocusedField(null)}
-                value=""
-              >
-                <option value="">เลือกสมาชิกเพิ่ม...</option>
-                {allUsers?.filter(u => u.email !== currentUser?.email).map((user: any) => (
-                  <option key={user.id} value={user.email} style={{ background: t.card }}>
-                    {user.full_name || user.email}
-                  </option>
-                ))}
-              </select>
-              <div style={{ position: 'absolute', right: '15px', top: '38px', color: t.accent, pointerEvents: 'none' }}>▼</div>
-              
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px' }}>
-                {formData.team_members.map(email => (
-                  <span key={email} style={{ background: 'rgba(255,107,0,0.1)', color: t.accent, padding: '4px 12px', borderRadius: '20px', fontSize: '12px', border: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {email.split('@')[0]} 
-                    <button type="button" onClick={() => setFormData({...formData, team_members: formData.team_members.filter(m => m !== email)})} style={{ background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer', fontSize: '14px', lineHeight: 1, padding: 0 }}>×</button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* จำนวนสูงสุด และ กำหนดส่ง */}
+            {/* จำนวนสมาชิกในทีม และ กำหนดส่ง */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
               <div style={{ position: 'relative' }}>
-                <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>จำนวนสมาชิกสูงสุด</label>
+                <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>จำนวนสมาชิกในทีม (รวมคุณ)</label>
                 <select 
                   style={{ ...fieldStyle('max'), appearance: 'none', cursor: 'pointer' } as any} 
                   value={formData.max_assignees}
-                  onChange={(e) => setFormData({...formData, max_assignees: parseInt(e.target.value)})}
+                  onChange={(e) => {
+                    const nextMax = Math.max(1, parseInt(e.target.value))
+                    const nextSlots = Math.max(0, nextMax - 1)
+                    setFormData(prev => {
+                      const prevMembers = Array.isArray(prev.team_members) ? prev.team_members : []
+                      const trimmed = prevMembers.map(m => String(m ?? '').trim()).slice(0, nextSlots)
+                      const padded = [...trimmed, ...Array.from({ length: Math.max(0, nextSlots - trimmed.length) }, () => '')]
+                      return { ...prev, max_assignees: nextMax, team_members: padded }
+                    })
+                  }}
                   onFocus={() => setFocusedField('max')}
                   onBlur={() => setFocusedField(null)}
                 >
@@ -227,6 +214,56 @@ export default function CreateTaskPage() {
                   value={formData.dueDate}
                   onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
                 />
+              </div>
+            </div>
+
+            {/* สมาชิกทีมตามจำนวนที่เลือก - ดึงชื่อจาก DB และคนที่เลือกแล้วจะไม่โผล่ในช่องถัดไป */}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>
+                สมาชิกทีม ({Math.max(0, formData.max_assignees - 1)} คน)
+              </label>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {Array.from({ length: Math.max(0, formData.max_assignees - 1) }).map((_, idx) => {
+                  const selectedInOtherSlots = new Set(
+                    (formData.team_members || []).filter((_, i) => i !== idx).map(m => String(m ?? '').trim()).filter(Boolean)
+                  )
+                  const availableUsers = (allUsers || []).filter((u: any) => 
+                    u.email && 
+                    u.email !== currentUser?.email && 
+                    !selectedInOtherSlots.has(u.email)
+                  )
+                  return (
+                    <div key={idx} style={{ position: 'relative' }}>
+                      <select
+                        style={{ ...fieldStyle(`team_${idx}`), appearance: 'none', cursor: 'pointer' } as any}
+                        value={formData.team_members[idx] ?? ''}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          setFormData(prev => {
+                            const next = Array.isArray(prev.team_members) ? [...prev.team_members] : []
+                            next[idx] = value
+                            return { ...prev, team_members: next }
+                          })
+                        }}
+                        onFocus={() => setFocusedField(`team_${idx}`)}
+                        onBlur={() => setFocusedField(null)}
+                      >
+                        <option value="" style={{ background: t.card }}>— เลือกสมาชิกคนที่ {idx + 1} —</option>
+                        {availableUsers.map((user: any) => (
+                          <option key={user.id} value={user.email} style={{ background: t.card }}>
+                            {user.full_name || user.email}
+                          </option>
+                        ))}
+                      </select>
+                      <div style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', color: t.accent, pointerEvents: 'none' }}>▼</div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div style={{ marginTop: '10px', fontSize: '12px', color: t.subText }}>
+                ระบบจะใส่คุณเป็นสมาชิกอัตโนมัติ สมาชิกที่เลือกแล้วจะไม่แสดงในช่องถัดไป
               </div>
             </div>
 
