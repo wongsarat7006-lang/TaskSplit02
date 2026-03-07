@@ -68,15 +68,6 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
     const loadData = async () => {
       const taskToEdit = tasks.find(t => t.id === taskId)
       if (!taskToEdit) return
-      // รอ allUsers โหลดก่อน แล้วค่อยเช็คสิทธิ์
-      if (allUsers && allUsers.length > 0) {
-        const myProfile = allUsers.find((u: any) => u.id === currentUser?.id)
-        if (myProfile && myProfile.role !== 'admin') {
-          alert('อนุญาตให้แก้ไขงานได้เฉพาะหัวหน้างาน / แอดมิน เท่านั้น')
-          router.replace('/tasks')
-          return
-        }
-      }
 
       const anyTask: any = taskToEdit
       const allTeam: string[] = Array.isArray(anyTask.team_members) ? anyTask.team_members : []
@@ -111,6 +102,11 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
     e.preventDefault()
     if (!formData.title) return alert('กรุณาระบุหัวข้องาน')
     if (formData.due_date && formData.due_date < todayStr) return alert('ไม่สามารถเลือกวันสิ้นสุดงานเป็นวันในอดีตได้')
+
+    if (!isAdmin) {
+      alert('อนุญาตให้บันทึก/แก้ไขงานได้เฉพาะหัวหน้างาน / แอดมิน เท่านั้น (บัญชีพนักงานดูได้อย่างเดียว)')
+      return
+    }
 
     setIsSubmitting(true)
     try {

@@ -12,7 +12,7 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Profile[]>(allUsers)
   const [loading, setLoading] = useState(false)
   const [savingId, setSavingId] = useState<string | null>(null)
-  const [newEmployee, setNewEmployee] = useState({ full_name: '', email: '' })
+  const [newEmployee, setNewEmployee] = useState({ full_name: '', email: '', password: '' })
 
   useEffect(() => {
     setEmployees(allUsers)
@@ -56,21 +56,30 @@ export default function EmployeesPage() {
       alert('กรุณากรอกอีเมลพนักงาน')
       return
     }
+    if (!newEmployee.password || newEmployee.password.length < 6) {
+      alert('กรุณาตั้งรหัสผ่านอย่างน้อย 6 ตัวอักษร')
+      return
+    }
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({
-          full_name: newEmployee.full_name || null,
-          email: newEmployee.email,
-        })
-        .select('id, full_name, email, avatar_url')
-        .single()
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (error) throw error
-      if (data) {
-        setEmployees(prev => [data as Profile, ...prev])
-        setNewEmployee({ full_name: '', email: '' })
+      const res = await fetch('/api/admin/create-employee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: newEmployee.full_name,
+          email: newEmployee.email,
+          password: newEmployee.password,
+          accessToken: session?.access_token,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'ไม่สามารถสร้างบัญชีพนักงานได้')
+
+      if (json.profile) {
+        setEmployees(prev => [json.profile as Profile, ...prev])
+        setNewEmployee({ full_name: '', email: '', password: '' })
       }
     } catch (err: any) {
       alert(err.message || 'ไม่สามารถเพิ่มพนักงานได้')
@@ -157,8 +166,18 @@ export default function EmployeesPage() {
     if (!ok) return
     setSavingId(emp.id)
     try {
-      const { error } = await supabase.from('profiles').delete().eq('id', emp.id)
-      if (error) throw error
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/admin/delete-employee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: emp.id,
+          accessToken: session?.access_token,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'ไม่สามารถลบพนักงานได้')
+
       setEmployees(prev => prev.filter(e => e.id !== emp.id))
     } catch (err: any) {
       alert(err.message || 'ไม่สามารถลบพนักงานได้')
@@ -220,6 +239,24 @@ export default function EmployeesPage() {
             EMPLOYEE <span style={{ color: t.accent }}>MANAGEMENT</span>
           </h1>
           <p style={{ color: t.subText, marginTop: 4 }}>จัดการรายชื่อพนักงาน เพิ่ม แก้ไข และลบข้อมูล</p>
+        </div>
+        <div>
+          <label style={{ fontSize: 12, color: t.subText, display: 'block', marginBottom: 4 }}>รหัสผ่านเริ่มต้น *</label>
+          <input
+            type="password"
+            style={{
+              width: '100%',
+              padding: '8px 10px',
+              borderRadius: 8,
+              border: `1px solid ${t.border}`,
+              background: isDarkMode ? '#020617' : '#f9fafb',
+              color: t.text,
+              fontSize: 13,
+            }}
+            value={newEmployee.password}
+            onChange={e => setNewEmployee({ ...newEmployee, password: e.target.value })}
+            placeholder="อย่างน้อย 6 ตัวอักษร"
+          />
         </div>
       </div>
 

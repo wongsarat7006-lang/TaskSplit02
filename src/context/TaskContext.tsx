@@ -186,9 +186,6 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   }
 
   const updateTask = async (task: Task) => {
-    // หา task เดิมเพื่อใช้เปรียบเทียบสำหรับ log
-    const previous = tasks.find(t => t.id === task.id)
-
     // อนุญาตให้แก้ไขได้เฉพาะ admin เท่านั้น
     const me = allUsers.find(u => u.id === currentUser?.id || u.email === currentUser?.email)
     if (me && me.role !== 'admin') {
@@ -211,43 +208,6 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     if (error) {
       console.error('[updateTask] ERROR:', error)
       throw error
-    }
-
-    // เขียนบันทึกการแก้ไขลง task_logs (ถ้ามีการเปลี่ยนแปลง)
-    if (previous) {
-      const trackedFields: (keyof Task)[] = [
-        'title',
-        'description',
-        'priority',
-        'status',
-        'due_date',
-        'category_id',
-      ]
-
-      const logs = trackedFields
-        .map(field => {
-          const before = (previous as any)[field] ?? null
-          const after = (task as any)[field] ?? null
-          if (before === after) return null
-          return {
-            task_id: task.id,
-            action: 'update',
-            field,
-            old_value: before === null ? null : String(before),
-            new_value: after === null ? null : String(after),
-            user_id: currentUser?.id ?? null,
-          }
-        })
-        .filter(Boolean) as any[]
-
-      if (logs.length > 0) {
-        const { error: logError } = await supabase
-          .from('task_logs')
-          .insert(logs)
-        if (logError) {
-          console.error('[task_logs] insert ERROR:', logError)
-        }
-      }
     }
 
     // อัปเดต state ฝั่ง client ตามค่าที่ส่งเข้าไป (optimistic update)

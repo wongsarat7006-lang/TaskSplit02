@@ -236,6 +236,7 @@ function TaskCard({
   onDelete?: () => void
   canEdit?: boolean
 }) {
+  const router = useRouter()
   const pColor = priorityColor[task.priority] || '#888'
 
   // คำนวณจำนวนวันที่เหลือถึงกำหนดส่ง
@@ -258,6 +259,13 @@ function TaskCard({
     }
   }
 
+  const isClickable = !canEdit
+
+  const handleCardClick = () => {
+    if (!isClickable) return
+    router.push(`/tasks/edit/${task.id}`)
+  }
+
   return (
     <div style={{
       background: t.card,
@@ -271,8 +279,10 @@ function TaskCard({
         : '0 2px 8px rgba(0,0,0,0.08)',
       transform: isDragging ? 'rotate(1deg)' : 'none',
       transition: 'all 0.15s ease',
-      cursor: 'grab',
-    }}>
+      cursor: isClickable ? 'pointer' : 'grab',
+    }}
+      onClick={handleCardClick}
+    >
 
       {/* Top row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
@@ -289,20 +299,31 @@ function TaskCard({
         </span>
         <div style={{ display: 'flex', gap: 6 }}>
           {canEdit && (
-            <Link href={`/tasks/edit/${task.id}`} style={{
-              fontSize: 13, padding: '3px 8px',
-              background: 'rgba(255,107,0,0.1)',
-              borderRadius: 6, textDecoration: 'none',
-              color: '#ff6b00',
-            }}>✏️</Link>
+            <Link
+              href={`/tasks/edit/${task.id}`}
+              onClick={e => e.stopPropagation()}
+              style={{
+                fontSize: 13, padding: '3px 8px',
+                background: 'rgba(255,107,0,0.1)',
+                borderRadius: 6, textDecoration: 'none',
+                color: '#ff6b00',
+              }}
+            >
+              ✏️
+            </Link>
           )}
           {onDelete && (
-            <button onClick={onDelete} style={{
-              fontSize: 13, padding: '3px 8px',
-              background: 'rgba(255,60,60,0.1)',
-              border: 'none', borderRadius: 6,
-              cursor: 'pointer', color: '#ff4444',
-            }}>🗑️</button>
+            <button
+              onClick={e => { e.stopPropagation(); onDelete() }}
+              style={{
+                fontSize: 13, padding: '3px 8px',
+                background: 'rgba(255,60,60,0.1)',
+                border: 'none', borderRadius: 6,
+                cursor: 'pointer', color: '#ff4444',
+              }}
+            >
+              🗑️
+            </button>
           )}
         </div>
       </div>
