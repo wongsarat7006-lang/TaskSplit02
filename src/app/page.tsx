@@ -1,20 +1,16 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useEffect } from 'react'
 import Link from 'next/link'
-import { useTasks, Task } from '../context/TaskContext'
-import { supabase } from '../lib/supabaseClient'
+import { useTasks } from '../context/TaskContext'
 
 export default function DashboardPage() {
   const {
     tasks = [],
-    currentUser,
     fetchTasks,
     loading,
     isDarkMode, // ⬅️ ใช้โหมดจาก Context
   } = useTasks()
-
-  const [joiningId, setJoiningId] = useState<string | null>(null)
 
   /* =======================
      Theme Configuration
@@ -47,63 +43,14 @@ export default function DashboardPage() {
   }, [fetchTasks])
 
   /* =======================
-     Join Task
+     Group Tasks for Overview
+     - หน้าแรกใช้ดูงานภาพรวม แบ่งตามสถานะ
   ======================= */
-  const handleJoin = async (task: Task) => {
-    if (!currentUser) {
-      alert('กรุณาเข้าสู่ระบบก่อนรับงาน')
-      return
-    }
-
-    if (joiningId) return
-
-    const members = task.team_members || []
-    const currentCount =
-      typeof task.current_people === 'number'
-        ? task.current_people
-        : Math.max(0, members.length - 1)
-    const maxCount = task.max_assignees || 1
-
-    if (members.includes(currentUser.email)) {
-      alert('คุณรับงานนี้แล้ว')
-      return
-    }
-
-    if (currentCount >= maxCount) {
-      alert('ขออภัย งานนี้เต็มแล้ว')
-      return
-    }
-
-    try {
-      setJoiningId(task.id)
-
-      const { error } = await supabase
-        .from('tasks')
-        .update({
-          current_people: currentCount + 1,
-          team_members: [...members, currentUser.email],
-        })
-        .eq('id', task.id)
-
-      if (error) throw error
-
-      await fetchTasks?.()
-    } catch (err: any) {
-      alert('เกิดข้อผิดพลาด: ' + err.message)
-    } finally {
-      setJoiningId(null)
-    }
-  }
-
-  /* =======================
-     Filter Public Missions
-     - แสดงทุกงานที่ยังไม่เป็นสถานะ done
-     - หน้าแรก “ทุกคนเห็นได้” แต่ปุ่มรับงานจะกดได้เฉพาะคนที่รับได้จริง
-       (ตรวจสิทธิ์และจำนวนคนในปุ่ม ไม่ใช่ตอนกรองรายการ)
-  ======================= */
-  const publicTasks = tasks.filter(task => {
-    return task.status !== 'done'
-  })
+  const columns = [
+    { id: 'todo',  label: 'TO DO',  description: 'งานที่ยังไม่เริ่ม' },
+    { id: 'doing', label: 'DOING', description: 'งานที่กำลังดำเนินการ' },
+    { id: 'done',  label: 'DONE',  description: 'งานที่เสร็จแล้ว' },
+  ] as const
 
   /* =======================
      Loading
@@ -161,10 +108,10 @@ export default function DashboardPage() {
             fontSize: 64,
             margin: 0
           }}>
-            PUBLIC <span style={{ color: t.accent }}>TASKS</span>
+            TASK <span style={{ color: t.accent }}>OVERVIEW</span>
           </h1>
           <p style={{ color: t.subText }}>
-            ค้นหาและรับงานที่เหมาะสม
+            ดูภาพรวมงานทั้งหมด แบ่งตามสถานะ เพื่อเช็คความคืบหน้าได้ง่าย
           </p>
         </div>
 
@@ -184,87 +131,173 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Mission Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-        gap: 30
-      }}>
-        {publicTasks.map(task => (
-          (() => {
-            const members = task.team_members || []
-            const currentCount =
-              typeof task.current_people === 'number'
-                ? task.current_people
-                : Math.max(0, members.length - 1)
-            const maxCount = task.max_assignees ?? 1
-            const hasSlot = currentCount < maxCount
-            const isOwner = !!currentUser && task.user_id === currentUser.id
-            const isJoined = !!currentUser && members.includes(currentUser.email)
-            const canJoin = !!currentUser && hasSlot && !isOwner && !isJoined
-
-            return (
-          <div
-            key={task.id}
-            style={{
-              background: t.card,
-              border: `1px solid ${t.border}`,
-              borderRadius: 24,
-              padding: 30,
-              display: 'flex',
-              flexDirection: 'column',
-              backdropFilter: isDarkMode ? 'blur(14px)' : 'none'
-            }}
-          >
-            <h2>{task.title}</h2>
-
-            <p style={{ color: t.subText }}>
-              {task.description || 'ไม่มีรายละเอียด'}
-            </p>
-
-            <p style={{ color: t.subText, fontSize: 12, marginTop: 0 }}>
-              👥 {currentCount}/{maxCount} คน {hasSlot ? `(ขาดอีก ${Math.max(0, maxCount - currentCount)} คน)` : '(เต็มแล้ว)'}
-            </p>
-
-            <button
-              onClick={() => handleJoin(task)}
-              disabled={joiningId === task.id || !canJoin}
-              style={{
-                marginTop: 'auto',
-                background: t.accent,
-                border: 'none',
-                padding: 14,
-                fontWeight: 900,
-                borderRadius: 12,
-                cursor: (joiningId === task.id || !canJoin) ? 'not-allowed' : 'pointer',
-                opacity: (joiningId === task.id || !canJoin) ? 0.6 : 1,
-              }}
-            >
-              {!currentUser
-                ? 'LOGIN TO ACCEPT'
-                : isOwner
-                  ? 'YOUR TASK'
-                  : isJoined
-                    ? 'ALREADY ACCEPTED'
-                    : hasSlot
-                      ? 'ACCEPT TASK +'
-                      : 'FULL'
-              }
-            </button>
-          </div>
-            )
-          })()
-        ))}
-      </div>
-
-      {publicTasks.length === 0 && (
-        <p style={{
-          marginTop: 80,
-          textAlign: 'center',
-          color: t.subText
-        }}>
-          ไม่พบงานที่ขาดคน
+      {/* Overview Board (Read Only) */}
+      {tasks.length === 0 ? (
+        <p
+          style={{
+            marginTop: 80,
+            textAlign: 'center',
+            color: t.subText,
+          }}
+        >
+          ยังไม่มีงานในระบบ
         </p>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, minmax(260px, 1fr))',
+            gap: 24,
+          }}
+        >
+          {columns.map(col => {
+            const colTasks = tasks.filter(task => task.status === col.id)
+            return (
+              <div
+                key={col.id}
+                style={{
+                  background: t.card,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 18,
+                  padding: 20,
+                }}
+              >
+                {/* Column header */}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'baseline',
+                    marginBottom: 12,
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontFamily: engFont,
+                        fontSize: 20,
+                        letterSpacing: 2,
+                      }}
+                    >
+                      {col.label}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: t.subText,
+                        marginTop: 2,
+                      }}
+                    >
+                      {col.description}
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      minWidth: 26,
+                      textAlign: 'center',
+                      background: `${t.accent}22`,
+                      color: t.accent,
+                      borderRadius: 999,
+                      padding: '2px 10px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {colTasks.length}
+                  </span>
+                </div>
+
+                {/* Column tasks (read only cards) */}
+                {colTasks.length === 0 ? (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: t.subText,
+                      opacity: 0.7,
+                      marginTop: 12,
+                    }}
+                  >
+                    ไม่มีงานในสถานะนี้
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 12,
+                      marginTop: 8,
+                    }}
+                  >
+                    {colTasks.map(task => {
+                      const members = task.team_members || []
+                      const currentCount =
+                        typeof task.current_people === 'number'
+                          ? task.current_people
+                          : Math.max(0, members.length - 1)
+                      const maxCount = task.max_assignees ?? 1
+
+                      return (
+                        <div
+                          key={task.id}
+                          style={{
+                            borderRadius: 14,
+                            border: `1px solid ${t.border}`,
+                            padding: 14,
+                            background: isDarkMode
+                              ? 'rgba(15,23,42,0.6)'
+                              : '#ffffff',
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontWeight: 700,
+                              fontSize: 14,
+                              marginBottom: 4,
+                            }}
+                          >
+                            {task.title}
+                          </div>
+                          {task.description && (
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: t.subText,
+                                marginBottom: 6,
+                              }}
+                            >
+                              {task.description}
+                            </div>
+                          )}
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              fontSize: 11,
+                              color: t.subText,
+                            }}
+                          >
+                            <span>
+                              👥 {currentCount}/{maxCount} คน
+                            </span>
+                            {task.due_date && (
+                              <span>
+                                📅{' '}
+                                {new Date(
+                                  task.due_date
+                                ).toLocaleDateString('th-TH')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
       )}
     </div>
   )
