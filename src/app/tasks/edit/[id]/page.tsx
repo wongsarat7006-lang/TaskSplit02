@@ -56,7 +56,9 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
 
   const thaiFont = "'Sarabun', sans-serif"
   const engFont = "'Bebas Neue', Impact, sans-serif"
-  const todayStr = new Date().toISOString().split('T')[0]
+
+  const now = new Date()
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
   // -------------------- LOAD DATA --------------------
   useEffect(() => {
@@ -101,6 +103,7 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.title) return alert('กรุณาระบุหัวข้องาน')
+    if (formData.due_date && formData.due_date < todayStr) return alert('ไม่สามารถเลือกวันสิ้นสุดงานเป็นวันในอดีตได้')
 
     setIsSubmitting(true)
     try {
@@ -302,16 +305,36 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
             </div>
           </div>
 
-          {/* กำหนดส่ง */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, color: '#ff6b00', marginBottom: 8, fontWeight: 'bold' }}>กำหนดส่ง (Deadline)</label>
-            <input
-              type="date"
-              min={todayStr}
-              style={fieldStyle('date') as any}
-              value={formData.due_date || ''}
-              onChange={e => setFormData({ ...formData, due_date: e.target.value })}
-            />
+          {/* จำนวนสูงสุด + กำหนดส่ง */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginBottom: 16 }}>
+            <div style={{ position: 'relative' }}>
+              <label style={{ display: 'block', fontSize: 13, color: '#ff6b00', marginBottom: 8, fontWeight: 'bold' }}>จำนวนสมาชิกสูงสุด</label>
+              <select
+                style={{ ...fieldStyle('max'), appearance: 'none', cursor: 'pointer' } as any}
+                value={formData.max_assignees}
+                onChange={e => setFormData({ ...formData, max_assignees: parseInt(e.target.value, 10) || 1 })}
+                onFocus={() => setFocusedField('max')}
+                onBlur={() => setFocusedField(null)}
+              >
+                {[1, 2, 3, 4, 5, 10].map(n => (
+                  <option key={n} value={n}>
+                    {n} คน
+                  </option>
+                ))}
+              </select>
+              <div style={{ position: 'absolute', right: 15, top: 38, color: '#ff6b00', pointerEvents: 'none' }}>▼</div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 13, color: '#ff6b00', marginBottom: 8, fontWeight: 'bold' }}>กำหนดส่ง (Deadline)</label>
+              <input
+                type="date"
+                min={todayStr}
+                style={fieldStyle('date') as any}
+                value={formData.due_date || ''}
+                onChange={e => setFormData({ ...formData, due_date: e.target.value })}
+              />
+            </div>
           </div>
 
           {/* รายละเอียด */}
