@@ -9,11 +9,8 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 
 export default function TasksPage() {
   const router = useRouter()
-  const { tasks, categories, deleteTask, updateTask, isDarkMode } = useTasks()
+  const { tasks, categories, deleteTask, updateTask, leaveTask, isDarkMode, currentUser } = useTasks()
 
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filterPriority, setFilterPriority] = useState('all')
-  const [filterCategory, setFilterCategory] = useState('all')
   const [hasMounted, setHasMounted] = useState(false)
 
   useEffect(() => {
@@ -45,12 +42,17 @@ export default function TasksPage() {
     high: 'สูง', medium: 'กลาง', low: 'ต่ำ'
   }
 
-  const filteredTasks = tasks.filter(task => {
-    const matchText     = task.title.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchPriority = filterPriority === 'all' || task.priority === filterPriority
-    const matchCategory = filterCategory === 'all' || task.category_id === filterCategory
-    return matchText && matchPriority && matchCategory
+  // แสดงเฉพาะงานที่เกี่ยวกับผู้ใช้ปัจจุบัน (เป็นเจ้าของหรืออยู่ในทีม)
+  const myTasks = tasks.filter(task => {
+    if (!currentUser) return false
+    const isOwner = task.user_id === currentUser.id
+    const isTeamMember =
+      Array.isArray(task.team_members) && task.team_members.includes(currentUser.email)
+    return isOwner || isTeamMember
   })
+
+  // ตอนนี้ไม่ต้องมีระบบค้นหา/กรองพิเศษ ใช้เฉพาะงานของฉันทั้งหมด
+  const filteredTasks = myTasks
 
   const columns: { id: Task['status']; label: string; emoji: string }[] = [
     { id: 'todo',  label: 'TO DO',  emoji: '' },
@@ -58,7 +60,7 @@ export default function TasksPage() {
     { id: 'done',  label: 'DONE',   emoji: '' },
   ]
 
-  const onDragEnd = (result: DropResult) => {
+  const onDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result
 
     // ไม่มีปลายทาง (ลากแล้วปล่อยนอกคอลัมน์)
@@ -97,21 +99,15 @@ export default function TasksPage() {
     if (!ok) return
 
     // อัปเดตสถานะงาน
-    updateTask({
-      ...task,
-      status: toStatus,
-    })
-  }
-
-  const inputStyle: React.CSSProperties = {
-    padding: '10px 14px',
-    background: t.card,
-    border: `1px solid ${t.border}`,
-    borderRadius: 8,
-    color: t.text,
-    fontSize: 13,
-    outline: 'none',
-    fontFamily: "'Sarabun', sans-serif",
+    try {
+      await updateTask({
+        ...task,
+        status: toStatus,
+      })
+    } catch (err: any) {
+      console.error('[onDragEnd] updateTask error', err)
+      alert(err?.message || 'อัปเดตสถานะงานไม่สำเร็จ (อาจไม่มีสิทธิ์แก้ไขงานนี้)')
+    }
   }
 
   return (
@@ -140,26 +136,6 @@ export default function TasksPage() {
             + สร้างงาน
           </Link>
         </header>
-
-        {/* Search & Filter */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 28, flexWrap: 'wrap' }}>
-          <input
-            style={{ ...inputStyle, flex: 1, minWidth: 200 }}
-            placeholder="🔍 ค้นหางาน..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
-          <select style={inputStyle as any} value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
-            <option value="all">📁 ทุกหมวด</option>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <select style={inputStyle as any} value={filterPriority} onChange={e => setFilterPriority(e.target.value)}>
-            <option value="all"> ทุกระดับ</option>
-            <option value="high">🔴 สูง</option>
-            <option value="medium">🟠 กลาง</option>
-            <option value="low">🟢 ต่ำ</option>
-          </select>
-        </div>
 
         {/* Board */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
@@ -203,26 +179,41 @@ export default function TasksPage() {
                     </div>
 
                     {/* Cards */}
-                    {colTasks.map((task, index) => (
-                      <Draggable key={task.id} draggableId={task.id} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                          >
-                            <TaskCard
-                              task={task}
-                              t={t}
-                              priorityColor={priorityColor}
-                              priorityLabel={priorityLabel}
-                              isDragging={snapshot.isDragging}
-                              onDelete={() => { if (confirm('ลบงานนี้?')) deleteTask(task.id) }}
-                            />
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
+                    {colTasks.map((task, index) => {
+                      const isOwner = currentUser && task.user_id === currentUser.id
+                      const isJoined =
+                        currentUser &&
+                        !isOwner &&
+                        Array.isArray(task.team_members) &&
+                        task.team_members.includes(currentUser.email)
+                      return (
+                        <Draggable key={task.id} draggableId={task.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                            >
+                              <TaskCard
+                                task={task}
+                                t={t}
+                                priorityColor={priorityColor}
+                                priorityLabel={priorityLabel}
+                                isDragging={snapshot.isDragging}
+                                onDelete={isOwner ? () => { if (confirm('ลบงานนี้?')) deleteTask(task.id) } : undefined}
+                                onLeave={
+                                  isJoined
+                                    ? () => {
+                                        if (confirm('ยืนยันไม่รับงานนี้แล้ว? งานจะยังอยู่และคนอื่นรับได้')) leaveTask(task)
+                                      }
+                                    : undefined
+                                }
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      )
+                    })}
 
                     {colTasks.length === 0 && (
                       <div style={{ textAlign: 'center', color: t.subText, fontSize: 13, marginTop: 60, opacity: 0.5 }}>
@@ -244,16 +235,37 @@ export default function TasksPage() {
 }
 
 function TaskCard({
-  task, t, priorityColor, priorityLabel, isDragging, onDelete
+  task, t, priorityColor, priorityLabel, isDragging, onDelete, onLeave
 }: {
   task: Task
   t: any
   priorityColor: Record<string, string>
   priorityLabel: Record<string, string>
   isDragging: boolean
-  onDelete: () => void
+  onDelete?: () => void
+  onLeave?: () => void
 }) {
   const pColor = priorityColor[task.priority] || '#888'
+
+  // คำนวณจำนวนวันที่เหลือถึงกำหนดส่ง
+  let daysLeftText: string | null = null
+  if (task.due_date) {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const due = new Date(task.due_date)
+    due.setHours(0, 0, 0, 0)
+    const diffDays = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (diffDays > 1) {
+      daysLeftText = `เหลือ ${diffDays} วัน`
+    } else if (diffDays === 1) {
+      daysLeftText = 'เหลือ 1 วัน'
+    } else if (diffDays === 0) {
+      daysLeftText = 'กำหนดวันนี้'
+    } else {
+      daysLeftText = `เลยกำหนด ${Math.abs(diffDays)} วัน`
+    }
+  }
 
   return (
     <div style={{
@@ -291,12 +303,14 @@ function TaskCard({
             borderRadius: 6, textDecoration: 'none',
             color: '#ff6b00',
           }}>✏️</Link>
-          <button onClick={onDelete} style={{
-            fontSize: 13, padding: '3px 8px',
-            background: 'rgba(255,60,60,0.1)',
-            border: 'none', borderRadius: 6,
-            cursor: 'pointer', color: '#ff4444',
-          }}>🗑️</button>
+          {onDelete && (
+            <button onClick={onDelete} style={{
+              fontSize: 13, padding: '3px 8px',
+              background: 'rgba(255,60,60,0.1)',
+              border: 'none', borderRadius: 6,
+              cursor: 'pointer', color: '#ff4444',
+            }}>🗑️</button>
+          )}
         </div>
       </div>
 
@@ -328,18 +342,38 @@ function TaskCard({
         </span>
       )}
 
-      {/* Footer */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-        {task.due_date ? (
-          <span style={{ fontSize: 11, color: t.subText }}>
-            📅 {new Date(task.due_date).toLocaleDateString('th-TH')}
-          </span>
-        ) : <span />}
-
-        {task.team_members && task.team_members.length > 0 && (
-          <span style={{ fontSize: 11, color: t.subText }}>
-            👥 {task.current_people || 1}/{task.max_assignees || 1}
-          </span>
+      {/* Footer: วันที่ + จำนวนคน + ปุ่มไม่รับงานแล้ว */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {task.due_date && (
+            <span style={{ fontSize: 11, color: t.subText }}>
+              📅 {new Date(task.due_date).toLocaleDateString('th-TH')}
+              {daysLeftText ? ` • ${daysLeftText}` : ''}
+            </span>
+          )}
+          {task.team_members && task.team_members.length > 0 && (
+            <span style={{ fontSize: 11, color: t.subText }}>
+              👥 {task.current_people || 1}/{task.max_assignees || 1}
+            </span>
+          )}
+        </div>
+        {onLeave && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onLeave() }}
+            style={{
+              fontSize: 11,
+              padding: '4px 10px',
+              background: 'rgba(148, 163, 184, 0.2)',
+              border: `1px solid ${t.border}`,
+              borderRadius: 8,
+              color: t.subText,
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            ไม่รับงานแล้ว
+          </button>
         )}
       </div>
     </div>

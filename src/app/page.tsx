@@ -94,17 +94,12 @@ export default function DashboardPage() {
 
   /* =======================
      Filter Public Missions
-     - แสดงเฉพาะงานที่ยังขาดคน
-     - ไม่แสดงงานที่สถานะ done
+     - แสดงทุกงานที่ยังไม่เป็นสถานะ done
      - หน้าแรก “ทุกคนเห็นได้” แต่ปุ่มรับงานจะกดได้เฉพาะคนที่รับได้จริง
+       (ตรวจสิทธิ์และจำนวนคนในปุ่ม ไม่ใช่ตอนกรองรายการ)
   ======================= */
   const publicTasks = tasks.filter(task => {
-    const currentCount = task.current_people ?? 0
-    const maxCount = task.max_assignees ?? 1
-    const hasSlot = currentCount < maxCount
-    const isNotDone = task.status !== 'done'
-
-    return hasSlot && isNotDone
+    return task.status !== 'done'
   })
 
   /* =======================

@@ -55,6 +55,7 @@ interface TaskContextType {
   updateTask: (task: Task) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   joinTask: (task: Task) => Promise<void>
+  leaveTask: (task: Task) => Promise<void>
   fetchComments: (taskId: string) => Promise<any[]>
   addComment: (taskId: string, content: string, author: string) => Promise<{ data: any; error: any }>
 }
@@ -77,7 +78,10 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     console.log('[fetchTasks] starting...')
     const { data, error } = await supabase
       .from('tasks')
-      .select('*, categories (name, color)')
+      // NOTE: เลี่ยงการ join categories ตรง ๆ เพราะ Supabase แจ้งว่า
+      // "more than one relationship was found for 'tasks' and 'categories'"
+      // จึงดึงเฉพาะ tasks ตรง ๆ แล้วให้ categories แยกจาก fetchCategories()
+      .select('*')
       .order('created_at', { ascending: false })
     console.log('[fetchTasks] data:', data)
     console.log('[fetchTasks] error:', error)
@@ -140,6 +144,15 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   const addTask = async (taskData: any) => {
     if (!currentUser) throw new Error('Not authenticated')
+
+    // รวมสมาชิกทีมจากหน้าสร้างงาน + ผู้สร้างเองเสมอ
+    const inputMembers: string[] = Array.isArray(taskData.team_members)
+      ? taskData.team_members
+      : []
+    const members = Array.from(
+      new Set([currentUser.email, ...inputMembers])
+    )
+
     const payload = {
       title: taskData.title,
       description: taskData.description,
@@ -150,29 +163,89 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       user_id: currentUser.id,
       author_email: currentUser.email,
       max_assignees: taskData.max_assignees || 1,
-      current_people: 1,
-      team_members: [currentUser.email]
+      current_people: taskData.current_people ?? members.length,
+      team_members: members,
     }
     console.log('[addTask] payload:', payload)
     const { data, error } = await supabase
       .from('tasks').insert(payload)
-      .select('*, categories (name, color)').single()
+      .select('*').single()
     console.log('[addTask] result:', data, error)
     if (error) throw error
     setTasks(prev => [data as Task, ...prev])
   }
 
   const updateTask = async (task: Task) => {
+    // หา task เดิมเพื่อใช้เปรียบเทียบสำหรับ log
+    const previous = tasks.find(t => t.id === task.id)
+
     const { categories, ...clean } = task as any
-    const { data, error } = await supabase
-      .from('tasks').update(clean).eq('id', task.id)
-      .select('*, categories (name, color)').single()
-    if (error) throw error
-    setTasks(prev => prev.map(t => (t.id === task.id ? data : t)))
+
+    // กันเคส due_date เป็น string ว่าง ซึ่ง Postgres (timestamptz) ไม่ยอมรับ
+    if (clean.due_date === '') {
+      clean.due_date = null
+    }
+
+    const { error } = await supabase
+      .from('tasks')
+      .update(clean)
+      .eq('id', task.id)
+
+    if (error) {
+      console.error('[updateTask] ERROR:', error)
+      throw error
+    }
+
+    // เขียนบันทึกการแก้ไขลง task_logs (ถ้ามีการเปลี่ยนแปลง)
+    if (previous) {
+      const trackedFields: (keyof Task)[] = [
+        'title',
+        'description',
+        'priority',
+        'status',
+        'due_date',
+        'category_id',
+      ]
+
+      const logs = trackedFields
+        .map(field => {
+          const before = (previous as any)[field] ?? null
+          const after = (task as any)[field] ?? null
+          if (before === after) return null
+          return {
+            task_id: task.id,
+            action: 'update',
+            field,
+            old_value: before === null ? null : String(before),
+            new_value: after === null ? null : String(after),
+            user_id: currentUser?.id ?? null,
+          }
+        })
+        .filter(Boolean) as any[]
+
+      if (logs.length > 0) {
+        const { error: logError } = await supabase
+          .from('task_logs')
+          .insert(logs)
+        if (logError) {
+          console.error('[task_logs] insert ERROR:', logError)
+        }
+      }
+    }
+
+    // อัปเดต state ฝั่ง client ตามค่าที่ส่งเข้าไป (optimistic update)
+    setTasks(prev => prev.map(t => (t.id === task.id ? { ...t, ...task } : t)))
   }
 
   const deleteTask = async (id: string) => {
-    await supabase.from('tasks').delete().eq('id', id)
+    const { error } = await supabase.from('tasks').delete().eq('id', id)
+
+    if (error) {
+      console.error('[deleteTask] ERROR:', error)
+      alert(error.message || 'ไม่สามารถลบงานนี้ได้ (อาจไม่มีสิทธิ์ลบ)')
+      return
+    }
+
     setTasks(prev => prev.filter(t => t.id !== id))
   }
 
@@ -187,6 +260,37 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       .update({ current_people: currentCount + 1, team_members: [...members, currentUser.email] })
       .eq('id', task.id)
     if (error) throw error
+    await fetchTasks()
+  }
+
+  const leaveTask = async (task: Task) => {
+    if (!currentUser) {
+      alert('กรุณาเข้าสู่ระบบ')
+      return
+    }
+    if (task.user_id === currentUser.id) {
+      alert('เจ้าของงานไม่สามารถกดไม่รับงานได้ (งานยังเป็นของคุณอยู่)')
+      return
+    }
+    const members = task.team_members || []
+    if (!members.includes(currentUser.email)) {
+      alert('คุณไม่ได้รับงานนี้อยู่แล้ว')
+      return
+    }
+    const newMembers = members.filter((email: string) => email !== currentUser.email)
+    const currentCount = task.current_people ?? members.length
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        team_members: newMembers,
+        current_people: Math.max(0, currentCount - 1),
+      })
+      .eq('id', task.id)
+    if (error) {
+      console.error('[leaveTask] ERROR:', error)
+      alert(error.message || 'ยกเลิกการรับงานไม่สำเร็จ')
+      return
+    }
     await fetchTasks()
   }
 
@@ -207,7 +311,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       tasks, categories, allUsers, loading, currentUser,
       isDarkMode, isSidebarOpen,
       toggleDarkMode, toggleSidebar, setSidebarOpen,
-      fetchTasks, addTask, updateTask, deleteTask, joinTask,
+      fetchTasks, addTask, updateTask, deleteTask, joinTask, leaveTask,
       fetchComments, addComment
     }}>
       {children}
