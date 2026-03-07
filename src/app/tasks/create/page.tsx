@@ -31,8 +31,9 @@ export default function CreateTaskPage() {
     inputBg: '#0d0d0d'
   }
 
-  // จำกัดวันให้เลือกได้ตั้งแต่วันนี้เป็นต้นไป
-  const todayStr = new Date().toISOString().split('T')[0]
+  // จำกัดวันให้เลือกได้ตั้งแต่วันนี้เป็นต้นไป (ใช้เวลา local)
+  const now = new Date()
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
   const fieldStyle = (name: string) => ({
     width: '100%', 
@@ -53,6 +54,7 @@ export default function CreateTaskPage() {
     if (!formData.title) return alert('กรุณาระบุหัวข้องาน')
     if (!currentUser || !currentUser.id) return alert('ระบบตรวจไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่อีกครั้ง')
     if (isSubmitting) return
+    if (formData.dueDate && formData.dueDate < todayStr) return alert('ไม่สามารถเลือกวันสิ้นสุดงานเป็นวันในอดีตได้')
 
     setIsSubmitting(true)
 
@@ -169,9 +171,9 @@ export default function CreateTaskPage() {
                 onBlur={() => setFocusedField(null)}
               >
                 <option value="">เลือกจากรายชื่อ (Default: ตัวคุณเอง)</option>
-                {allUsers?.map((user: any) => (
-                  <option key={user.id} value={user.email} style={{ background: t.card }}>
-                    {user.full_name || user.email}
+                {(allUsers || []).map((user: any) => (
+                  <option key={user.id} value={user.email || ''} style={{ background: t.card }}>
+                    {(user.full_name || user.email || 'ไม่มีชื่อ').trim() || user.id}
                   </option>
                 ))}
               </select>
@@ -250,11 +252,15 @@ export default function CreateTaskPage() {
                         onBlur={() => setFocusedField(null)}
                       >
                         <option value="" style={{ background: t.card }}>— เลือกสมาชิกคนที่ {idx + 1} —</option>
-                        {availableUsers.map((user: any) => (
-                          <option key={user.id} value={user.email} style={{ background: t.card }}>
-                            {user.full_name || user.email}
-                          </option>
-                        ))}
+                        {availableUsers.length === 0 ? (
+                          <option value="" disabled style={{ background: t.card }}>ไม่มีสมาชิกอื่นในระบบ</option>
+                        ) : (
+                          availableUsers.map((user: any) => (
+                            <option key={user.id} value={user.email} style={{ background: t.card }}>
+                              {(user.full_name || user.email || 'ไม่มีชื่อ').trim() || user.id}
+                            </option>
+                          ))
+                        )}
                       </select>
                       <div style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', color: t.accent, pointerEvents: 'none' }}>▼</div>
                     </div>

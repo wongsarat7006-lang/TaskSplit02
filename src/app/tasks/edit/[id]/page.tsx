@@ -55,6 +55,9 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
   const thaiFont = "'Sarabun', sans-serif"
   const engFont = "'Bebas Neue', Impact, sans-serif"
 
+  const now = new Date()
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
   // -------------------- LOAD DATA --------------------
   useEffect(() => {
     const loadData = async () => {
@@ -101,6 +104,7 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.title) return alert('กรุณาระบุหัวข้องาน')
+    if (formData.due_date && formData.due_date < todayStr) return alert('ไม่สามารถเลือกวันสิ้นสุดงานเป็นวันในอดีตได้')
 
     setIsSubmitting(true)
     try {
@@ -350,6 +354,7 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
               <label style={{ display: 'block', fontSize: 13, color: '#ff6b00', marginBottom: 8, fontWeight: 'bold' }}>กำหนดส่ง (Deadline)</label>
               <input
                 type="date"
+                min={todayStr}
                 style={fieldStyle('date') as any}
                 value={formData.due_date || ''}
                 onChange={e => setFormData({ ...formData, due_date: e.target.value })}
