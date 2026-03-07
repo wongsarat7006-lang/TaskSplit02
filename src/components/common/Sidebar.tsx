@@ -4,6 +4,7 @@ import { useTasks } from '../../context/TaskContext'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
+import { supabase } from '../../lib/supabaseClient'
 
 export default function Sidebar() {
   const {
@@ -18,10 +19,14 @@ export default function Sidebar() {
 
   const sidebarWidth = isSidebarOpen ? '260px' : '72px'
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
-      Cookies.remove('token')
-      router.push('/login')
+      try {
+        Cookies.remove('token')
+        await supabase.auth.signOut()
+      } finally {
+        router.push('/login')
+      }
     }
   }
 

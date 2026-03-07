@@ -105,26 +105,41 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
+    let mounted = true
+
     const init = async () => {
-      setLoading(true)
-      const { data: { session } } = await supabase.auth.getSession()
-      console.log('[init] session:', session?.user?.email ?? 'no session')
-      setCurrentUser(session?.user ?? null)
-      // หน้าแรกต้องเห็นงานได้แม้ยังไม่ล็อกอิน
-      await Promise.all([
-        fetchTasks(),
-        fetchCategories(),
-        session ? fetchAllUsers() : Promise.resolve(),
-      ])
-      supabase.auth.onAuthStateChange(async (_event, session) => {
-        console.log('[authChange]', _event)
+      try {
+        setLoading(true)
+        const { data: { session } } = await supabase.auth.getSession()
+        console.log('[init] session:', session?.user?.email ?? 'no session')
+        if (!mounted) return
         setCurrentUser(session?.user ?? null)
-        // logout แล้วยังต้องเห็น public missions ต่อได้
-        await fetchTasks()
-      })
-      setLoading(false)
+
+        // หน้าแรกต้องเห็นงานได้แม้ยังไม่ล็อกอิน
+        await Promise.all([
+          fetchTasks(),
+          fetchCategories(),
+          session ? fetchAllUsers() : Promise.resolve(),
+        ])
+      } finally {
+        if (mounted) setLoading(false)
+      }
     }
+
     init()
+
+    // ✅ สำคัญ: cleanup auth listener (กันติดซ้ำใน dev/StrictMode แล้วทำให้ state เพี้ยน)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('[authChange]', _event)
+      setCurrentUser(session?.user ?? null)
+      // logout แล้วยังต้องเห็น public tasks ต่อได้
+      await fetchTasks()
+    })
+
+    return () => {
+      mounted = false
+      subscription?.unsubscribe()
+    }
   }, [fetchTasks, fetchCategories, fetchAllUsers])
 
   const addTask = async (taskData: any) => {
