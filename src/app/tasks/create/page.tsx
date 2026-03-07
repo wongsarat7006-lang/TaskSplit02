@@ -21,6 +21,13 @@ export default function CreateTaskPage() {
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const currentProfile = allUsers?.find((u: any) => u.email === currentUser?.email)
+  const ownerDisplayName = currentProfile?.full_name || currentUser?.email || ''
+  const memberSlots = Array.from(
+    { length: formData.max_assignees || 0 },
+    (_, idx) => formData.team_members[idx] || ''
+  )
+
   const t = {
     bg: '#0a0a0a',
     card: '#0f0f0f',
@@ -56,7 +63,8 @@ export default function CreateTaskPage() {
 
     setIsSubmitting(true)
 
-    const finalTeam = Array.from(new Set([currentUser.email, ...formData.team_members]))
+    const selectedMembers = memberSlots.filter(Boolean)
+    const finalTeam = Array.from(new Set([currentUser.email, ...selectedMembers]))
 
     // ✅ ลบ author_email ออก เพราะไม่มีคอลัมน์นี้ใน Supabase
     const taskPayload = {
@@ -65,11 +73,11 @@ export default function CreateTaskPage() {
       priority: formData.priority,
       status: 'todo',
       user_id: currentUser.id,
-      assignee: formData.assignee || currentUser.email,
+      // หัวหน้างานล็อกเป็นผู้สร้างงานเสมอ
+      assignee: currentUser.email,
       due_date: formData.dueDate || null, 
       max_assignees: formData.max_assignees,
       team_members: finalTeam,
-      current_people: finalTeam.length
     }
 
     try {
@@ -146,88 +154,105 @@ export default function CreateTaskPage() {
               </div>
             </div>
 
-            {/* หัวหน้างาน */}
+            {/* หัวหน้างาน (ล็อกเป็นผู้สร้างงาน) */}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>
+                หัวหน้างาน (Lead Agent)
+              </label>
+              <input
+                style={fieldStyle('assignee') as any}
+                value={ownerDisplayName}
+                readOnly
+              />
+              <div style={{ marginTop: 6, fontSize: 11, color: t.subText }}>
+                หัวหน้างานจะเป็นอีเมลของผู้สร้างงานโดยอัตโนมัติ
+              </div>
+            </div>
+
+            {/* จำนวนสมาชิกสูงสุด */}
             <div style={{ position: 'relative' }}>
-              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>หัวหน้างาน (Lead Agent)</label>
+              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>
+                จำนวนสมาชิกสูงสุด
+              </label>
               <select 
-                style={{ ...fieldStyle('assignee'), appearance: 'none', cursor: 'pointer' } as any}
-                value={formData.assignee}
-                onChange={(e) => setFormData({...formData, assignee: e.target.value})}
-                onFocus={() => setFocusedField('assignee')}
+                style={{ ...fieldStyle('max'), appearance: 'none', cursor: 'pointer' } as any} 
+                value={formData.max_assignees}
+                onChange={(e) => {
+                  const newMax = parseInt(e.target.value)
+                  setFormData({
+                    ...formData,
+                    max_assignees: newMax,
+                    team_members: memberSlots.slice(0, newMax),
+                  })
+                }}
+                onFocus={() => setFocusedField('max')}
                 onBlur={() => setFocusedField(null)}
               >
-                <option value="">เลือกจากรายชื่อ (Default: ตัวคุณเอง)</option>
-                {allUsers?.map((user: any) => (
-                  <option key={user.id} value={user.email} style={{ background: t.card }}>
-                    {user.full_name || user.email}
-                  </option>
+                {[1, 2, 3, 4, 5, 10].map(n => (
+                  <option key={n} value={n} style={{ background: t.card }}>{n} คน</option>
                 ))}
               </select>
               <div style={{ position: 'absolute', right: '15px', top: '38px', color: t.accent, pointerEvents: 'none' }}>▼</div>
             </div>
 
             {/* เพิ่มสมาชิกทีม */}
-            <div style={{ position: 'relative' }}>
-              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>เพิ่มสมาชิกทีม (Team Members)</label>
-              <select 
-                style={{ ...fieldStyle('team'), appearance: 'none', cursor: 'pointer' } as any}
-                onChange={(e) => {
-                  const email = e.target.value;
-                  if (email && !formData.team_members.includes(email)) {
-                    setFormData({...formData, team_members: [...formData.team_members, email]})
-                  }
-                }}
-                onFocus={() => setFocusedField('team')}
-                onBlur={() => setFocusedField(null)}
-                value=""
-              >
-                <option value="">เลือกสมาชิกเพิ่ม...</option>
-                {allUsers?.filter(u => u.email !== currentUser?.email).map((user: any) => (
-                  <option key={user.id} value={user.email} style={{ background: t.card }}>
-                    {user.full_name || user.email}
-                  </option>
-                ))}
-              </select>
-              <div style={{ position: 'absolute', right: '15px', top: '38px', color: t.accent, pointerEvents: 'none' }}>▼</div>
-              
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px' }}>
-                {formData.team_members.map(email => (
-                  <span key={email} style={{ background: 'rgba(255,107,0,0.1)', color: t.accent, padding: '4px 12px', borderRadius: '20px', fontSize: '12px', border: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {email.split('@')[0]} 
-                    <button type="button" onClick={() => setFormData({...formData, team_members: formData.team_members.filter(m => m !== email)})} style={{ background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer', fontSize: '14px', lineHeight: 1, padding: 0 }}>×</button>
-                  </span>
-                ))}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>
+                เพิ่มสมาชิกทีม (Team Members)
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {memberSlots.map((value, index) => {
+                  const usedInOtherSlots = memberSlots.filter((v, i) => i !== index && v)
+                  const availableUsers = allUsers
+                    ?.filter((user: any) =>
+                      user?.email &&
+                      user.email !== currentUser?.email &&
+                      !usedInOtherSlots.includes(user.email)
+                    )
+                  return (
+                    <div key={index} style={{ position: 'relative' }}>
+                      <label style={{ display: 'block', fontSize: '12px', color: t.subText, marginBottom: '6px' }}>
+                        สมาชิกคนที่ {index + 1}
+                      </label>
+                      <select
+                        style={{ ...fieldStyle(`team-${index}`), appearance: 'none', cursor: 'pointer' } as any}
+                        value={value}
+                        onChange={(e) => {
+                          const email = e.target.value
+                          const updated = [...memberSlots]
+                          updated[index] = email
+                          setFormData({ ...formData, team_members: updated })
+                        }}
+                        onFocus={() => setFocusedField(`team-${index}`)}
+                        onBlur={() => setFocusedField(null)}
+                      >
+                        <option value="">เลือกสมาชิก...</option>
+                        {availableUsers?.map((user: any) => (
+                          <option key={user.id} value={user.email} style={{ background: t.card }}>
+                            {user.full_name || user.email}
+                          </option>
+                        ))}
+                      </select>
+                      <div style={{ position: 'absolute', right: '15px', top: '38px', color: t.accent, pointerEvents: 'none' }}>▼</div>
+                    </div>
+                  )
+                })}
+                <div style={{ fontSize: 11, color: t.subText }}>
+                  เลือกสมาชิกได้สูงสุด {formData.max_assignees} คน (ไม่รวมหัวหน้างาน)
+                </div>
               </div>
             </div>
 
-            {/* จำนวนสูงสุด และ กำหนดส่ง */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <div style={{ position: 'relative' }}>
-                <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>จำนวนสมาชิกสูงสุด</label>
-                <select 
-                  style={{ ...fieldStyle('max'), appearance: 'none', cursor: 'pointer' } as any} 
-                  value={formData.max_assignees}
-                  onChange={(e) => setFormData({...formData, max_assignees: parseInt(e.target.value)})}
-                  onFocus={() => setFocusedField('max')}
-                  onBlur={() => setFocusedField(null)}
-                >
-                  {[1, 2, 3, 4, 5, 10].map(n => (
-                    <option key={n} value={n} style={{ background: t.card }}>{n} คน</option>
-                  ))}
-                </select>
-                <div style={{ position: 'absolute', right: '15px', top: '38px', color: t.accent, pointerEvents: 'none' }}>▼</div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>กำหนดส่ง (Deadline)</label>
-                <input 
-                  type="date" 
-                  min={todayStr}
-                  style={{ ...fieldStyle('date'), colorScheme: 'dark' } as any} 
-                  value={formData.dueDate}
-                  onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
-                />
-              </div>
+            {/* กำหนดส่ง */}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>กำหนดส่ง (Deadline)</label>
+              <input 
+                type="date" 
+                min={todayStr}
+                style={{ ...fieldStyle('date'), colorScheme: 'dark' } as any} 
+                value={formData.dueDate}
+                onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
+              />
             </div>
 
             <div>

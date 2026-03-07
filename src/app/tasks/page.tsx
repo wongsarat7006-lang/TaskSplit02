@@ -181,11 +181,6 @@ export default function TasksPage() {
                     {/* Cards */}
                     {colTasks.map((task, index) => {
                       const isOwner = currentUser && task.user_id === currentUser.id
-                      const isJoined =
-                        currentUser &&
-                        !isOwner &&
-                        Array.isArray(task.team_members) &&
-                        task.team_members.includes(currentUser.email)
                       return (
                         <Draggable key={task.id} draggableId={task.id} index={index}>
                           {(provided, snapshot) => (
@@ -200,14 +195,8 @@ export default function TasksPage() {
                                 priorityColor={priorityColor}
                                 priorityLabel={priorityLabel}
                                 isDragging={snapshot.isDragging}
+                                canEdit={!!isOwner}
                                 onDelete={isOwner ? () => { if (confirm('ลบงานนี้?')) deleteTask(task.id) } : undefined}
-                                onLeave={
-                                  isJoined
-                                    ? () => {
-                                        if (confirm('ยืนยันไม่รับงานนี้แล้ว? งานจะยังอยู่และคนอื่นรับได้')) leaveTask(task)
-                                      }
-                                    : undefined
-                                }
                               />
                             </div>
                           )}
@@ -235,7 +224,7 @@ export default function TasksPage() {
 }
 
 function TaskCard({
-  task, t, priorityColor, priorityLabel, isDragging, onDelete, onLeave
+  task, t, priorityColor, priorityLabel, isDragging, onDelete, canEdit
 }: {
   task: Task
   t: any
@@ -243,7 +232,7 @@ function TaskCard({
   priorityLabel: Record<string, string>
   isDragging: boolean
   onDelete?: () => void
-  onLeave?: () => void
+  canEdit?: boolean
 }) {
   const pColor = priorityColor[task.priority] || '#888'
 
@@ -297,12 +286,14 @@ function TaskCard({
           {priorityLabel[task.priority] || task.priority}
         </span>
         <div style={{ display: 'flex', gap: 6 }}>
-          <Link href={`/tasks/edit/${task.id}`} style={{
-            fontSize: 13, padding: '3px 8px',
-            background: 'rgba(255,107,0,0.1)',
-            borderRadius: 6, textDecoration: 'none',
-            color: '#ff6b00',
-          }}>✏️</Link>
+          {canEdit && (
+            <Link href={`/tasks/edit/${task.id}`} style={{
+              fontSize: 13, padding: '3px 8px',
+              background: 'rgba(255,107,0,0.1)',
+              borderRadius: 6, textDecoration: 'none',
+              color: '#ff6b00',
+            }}>✏️</Link>
+          )}
           {onDelete && (
             <button onClick={onDelete} style={{
               fontSize: 13, padding: '3px 8px',
@@ -353,28 +344,15 @@ function TaskCard({
           )}
           {task.team_members && task.team_members.length > 0 && (
             <span style={{ fontSize: 11, color: t.subText }}>
-              👥 {task.current_people || 1}/{task.max_assignees || 1}
+              👥 {
+                typeof task.current_people === 'number'
+                  ? task.current_people
+                  : Math.max(0, (task.team_members?.length || 0) - 1)
+              }/{task.max_assignees || 1}
             </span>
           )}
         </div>
-        {onLeave && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onLeave() }}
-            style={{
-              fontSize: 11,
-              padding: '4px 10px',
-              background: 'rgba(148, 163, 184, 0.2)',
-              border: `1px solid ${t.border}`,
-              borderRadius: 8,
-              color: t.subText,
-              cursor: 'pointer',
-              fontWeight: 600,
-            }}
-          >
-            ไม่รับงานแล้ว
-          </button>
-        )}
+        {/* ปุ่มไม่รับงานแล้วถูกปิดการใช้งานตาม requirement ล่าสุด */}
       </div>
     </div>
   )

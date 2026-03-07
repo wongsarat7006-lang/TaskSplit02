@@ -3,17 +3,13 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTasks } from '../../../../context/TaskContext'
-import { supabase } from '../../../../lib/supabaseClient'
 
 export default function EditTaskPage({ params }: { params: { id: string } }) {
   const {
     tasks,
-    categories,
     allUsers,
     updateTask,
     isDarkMode,
-    fetchComments,
-    addComment,
     currentUser,
   } = useTasks()
 
@@ -34,12 +30,18 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
     max_assignees: 1,
   })
 
-  const [comments, setComments] = useState<any[]>([])
-  const [taskLogs, setTaskLogs] = useState<any[]>([])
-  const [newComment, setNewComment] = useState('')
-  const [isCommenting, setIsCommenting] = useState(false)
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // โปรไฟล์หัวหน้างาน (ใช้ assignee จากข้อมูลงาน)
+  const ownerProfile = allUsers?.find((u: any) => u.email === formData.assignee)
+  const ownerDisplayName = ownerProfile?.full_name || formData.assignee || ''
+
+  // ช่องเลือกสมาชิกทีมตามจำนวน max_assignees
+  const memberSlots = Array.from(
+    { length: formData.max_assignees || 0 },
+    (_, idx) => formData.team_members[idx] || ''
+  )
   const [isLoaded, setIsLoaded] = useState(false)
 
   // -------------------- THEME --------------------
@@ -54,14 +56,27 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
 
   const thaiFont = "'Sarabun', sans-serif"
   const engFont = "'Bebas Neue', Impact, sans-serif"
+  const todayStr = new Date().toISOString().split('T')[0]
 
   // -------------------- LOAD DATA --------------------
   useEffect(() => {
     const loadData = async () => {
       const taskToEdit = tasks.find(t => t.id === taskId)
       if (!taskToEdit) return
+      if (taskToEdit.user_id && currentUser?.id && taskToEdit.user_id !== currentUser.id) {
+        alert('มีสิทธิ์แก้ไขได้เฉพาะผู้สร้างงานเท่านั้น')
+        router.replace('/tasks')
+        return
+      }
 
       const anyTask: any = taskToEdit
+      const allTeam: string[] = Array.isArray(anyTask.team_members) ? anyTask.team_members : []
+      const ownerEmail: string =
+        anyTask.assignee ||
+        anyTask.author_email ||
+        currentUser?.email ||
+        ''
+      const nonOwnerMembers = allTeam.filter(email => email !== ownerEmail)
 
       setFormData({
         id: taskToEdit.id,
@@ -71,31 +86,16 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
         status: taskToEdit.status || 'todo',
         due_date: taskToEdit.due_date || '',
         category_id: taskToEdit.category_id || '',
-        assignee: anyTask.assignee || anyTask.author_email || currentUser?.email || '',
-        team_members: Array.isArray(anyTask.team_members) ? anyTask.team_members : [],
-        max_assignees: anyTask.max_assignees || 1,
+        assignee: ownerEmail,
+        team_members: nonOwnerMembers,
+        max_assignees: anyTask.max_assignees || (nonOwnerMembers.length || 1),
       })
 
-      try {
-        const [commentData, logData] = await Promise.all([
-          fetchComments(taskToEdit.id),
-          supabase
-            .from('task_logs')
-            .select('*')
-            .eq('task_id', taskToEdit.id)
-            .order('created_at', { ascending: false }),
-        ])
-
-        setComments(commentData || [])
-        if (logData.data) setTaskLogs(logData.data)
-        setIsLoaded(true)
-      } catch (err) {
-        console.error(err)
-      }
+      setIsLoaded(true)
     }
 
     if (taskId && tasks.length > 0) loadData()
-  }, [taskId, tasks, fetchComments])
+  }, [taskId, tasks, currentUser])
 
   // -------------------- SUBMIT --------------------
   const handleSubmit = async (e: React.FormEvent) => {
@@ -104,7 +104,19 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
 
     setIsSubmitting(true)
     try {
-      await updateTask(formData as any)
+      // รวมหัวหน้างานกลับเข้า team_members สำหรับบันทึกจริง
+      const ownerEmail = formData.assignee
+      const uniqueMembers = Array.from(
+        new Set([ownerEmail, ...memberSlots.filter(Boolean)])
+      )
+      const nonOwnerMembers = uniqueMembers.filter(email => email !== ownerEmail)
+
+      await updateTask({
+        ...formData,
+        team_members: uniqueMembers,
+        // current_people: นับเฉพาะสมาชิกทีมที่ไม่ใช่หัวหน้างาน
+        current_people: nonOwnerMembers.length,
+      } as any)
       alert('บันทึกการแก้ไขสำเร็จ')
       router.push('/tasks')
     } catch (err: any) {
@@ -112,24 +124,6 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
       alert(err?.message || 'ไม่สามารถบันทึกการแก้ไขได้')
     } finally {
       setIsSubmitting(false)
-    }
-  }
-
-  // -------------------- COMMENT --------------------
-  const handleSendComment = async () => {
-    if (!newComment.trim()) return
-    setIsCommenting(true)
-
-    try {
-      const author = currentUser?.email || 'User'
-      const { data, error } = await addComment(formData.id, newComment, author)
-
-      if (!error && data) {
-        setComments(prev => [...prev, data])
-        setNewComment('')
-      }
-    } finally {
-      setIsCommenting(false)
     }
   }
 
@@ -221,37 +215,41 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
             </div>
           </div>
 
-          {/* หมวดหมู่ */}
+          {/* หัวหน้างาน (ล็อกเป็นผู้สร้างงาน) */}
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, color: '#ff6b00', marginBottom: 8, fontWeight: 'bold' }}>หมวดหมู่</label>
-            <select
-              style={fieldStyle('category')}
-              value={formData.category_id}
-              onChange={e => setFormData({ ...formData, category_id: e.target.value })}
-            >
-              <option value="">-- เลือกหมวดหมู่ --</option>
-              {categories.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <label style={{ display: 'block', fontSize: 13, color: '#ff6b00', marginBottom: 8, fontWeight: 'bold' }}>
+              หัวหน้างาน (Lead Agent)
+            </label>
+            <input
+              style={fieldStyle('assignee')}
+              value={ownerDisplayName}
+              readOnly
+            />
+            <div style={{ marginTop: 6, fontSize: 11, color: t.subText }}>
+              หัวหน้างานจะเป็นผู้สร้างงาน (email เดิมของงาน) โดยอัตโนมัติ
+            </div>
           </div>
 
-          {/* หัวหน้างาน */}
+          {/* จำนวนสมาชิกสูงสุด */}
           <div style={{ marginBottom: 16, position: 'relative' }}>
-            <label style={{ display: 'block', fontSize: 13, color: '#ff6b00', marginBottom: 8, fontWeight: 'bold' }}>หัวหน้างาน (Lead Agent)</label>
+            <label style={{ display: 'block', fontSize: 13, color: '#ff6b00', marginBottom: 8, fontWeight: 'bold' }}>จำนวนสมาชิกสูงสุด</label>
             <select
-              style={{ ...fieldStyle('assignee'), appearance: 'none', cursor: 'pointer' } as any}
-              value={formData.assignee}
-              onChange={e => setFormData({ ...formData, assignee: e.target.value })}
-              onFocus={() => setFocusedField('assignee')}
+              style={{ ...fieldStyle('max'), appearance: 'none', cursor: 'pointer' } as any}
+              value={formData.max_assignees}
+              onChange={e => {
+                const newMax = parseInt(e.target.value, 10) || 1
+                setFormData({
+                  ...formData,
+                  max_assignees: newMax,
+                  team_members: memberSlots.slice(0, newMax),
+                })
+              }}
+              onFocus={() => setFocusedField('max')}
               onBlur={() => setFocusedField(null)}
             >
-              <option value="">เลือกจากรายชื่อ (Default: ตัวคุณเอง)</option>
-              {allUsers?.map((user: any) => (
-                <option key={user.id} value={user.email}>
-                  {user.full_name || user.email}
+              {[1, 2, 3, 4, 5, 10].map(n => (
+                <option key={n} value={n}>
+                  {n} คน
                 </option>
               ))}
             </select>
@@ -259,102 +257,61 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
           </div>
 
           {/* สมาชิกทีม */}
-          <div style={{ marginBottom: 16, position: 'relative' }}>
+          <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: 13, color: '#ff6b00', marginBottom: 8, fontWeight: 'bold' }}>สมาชิกทีม (Team Members)</label>
-            <select
-              style={{ ...fieldStyle('team'), appearance: 'none', cursor: 'pointer' } as any}
-              onChange={e => {
-                const email = e.target.value
-                if (email && !formData.team_members.includes(email)) {
-                  setFormData({ ...formData, team_members: [...formData.team_members, email] })
-                }
-              }}
-              onFocus={() => setFocusedField('team')}
-              onBlur={() => setFocusedField(null)}
-              value=""
-            >
-              <option value="">เลือกสมาชิกเพิ่ม...</option>
-              {allUsers
-                ?.filter(u => u.email !== currentUser?.email)
-                .map((user: any) => (
-                  <option key={user.id} value={user.email}>
-                    {user.full_name || user.email}
-                  </option>
-                ))}
-            </select>
-            <div style={{ position: 'absolute', right: 15, top: 38, color: '#ff6b00', pointerEvents: 'none' }}>▼</div>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-              {formData.team_members.map(email => (
-                <span
-                  key={email}
-                  style={{
-                    background: 'rgba(255,107,0,0.06)',
-                    color: '#ff6b00',
-                    padding: '4px 12px',
-                    borderRadius: 20,
-                    fontSize: 12,
-                    border: `1px solid ${t.border}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
-                >
-                  {email.split('@')[0]}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData({
-                        ...formData,
-                        team_members: formData.team_members.filter(m => m !== email),
-                      })
-                    }
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#ff4d4d',
-                      cursor: 'pointer',
-                      fontSize: 14,
-                      lineHeight: 1,
-                      padding: 0,
-                    }}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {memberSlots.map((value, index) => {
+                const usedInOtherSlots = memberSlots.filter((v, i) => i !== index && v)
+                const availableUsers = allUsers
+                  ?.filter((user: any) =>
+                    user?.email &&
+                    user.email !== formData.assignee &&
+                    !usedInOtherSlots.includes(user.email)
+                  )
+                return (
+                  <div key={index} style={{ position: 'relative' }}>
+                    <label style={{ display: 'block', fontSize: 12, color: t.subText, marginBottom: 6 }}>
+                      สมาชิกคนที่ {index + 1}
+                    </label>
+                    <select
+                      style={{ ...fieldStyle(`team-${index}`), appearance: 'none', cursor: 'pointer' } as any}
+                      value={value}
+                      onChange={e => {
+                        const email = e.target.value
+                        const updated = [...memberSlots]
+                        updated[index] = email
+                        setFormData({ ...formData, team_members: updated })
+                      }}
+                      onFocus={() => setFocusedField(`team-${index}`)}
+                      onBlur={() => setFocusedField(null)}
+                    >
+                      <option value="">เลือกสมาชิก...</option>
+                      {availableUsers?.map((user: any) => (
+                        <option key={user.id} value={user.email}>
+                          {user.full_name || user.email}
+                        </option>
+                      ))}
+                    </select>
+                    <div style={{ position: 'absolute', right: 15, top: 38, color: '#ff6b00', pointerEvents: 'none' }}>▼</div>
+                  </div>
+                )
+              })}
+              <div style={{ fontSize: 11, color: t.subText }}>
+                เลือกสมาชิกได้สูงสุด {formData.max_assignees} คน (ไม่รวมหัวหน้างาน)
+              </div>
             </div>
           </div>
 
-          {/* จำนวนสูงสุด + กำหนดส่ง */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginBottom: 16 }}>
-            <div style={{ position: 'relative' }}>
-              <label style={{ display: 'block', fontSize: 13, color: '#ff6b00', marginBottom: 8, fontWeight: 'bold' }}>จำนวนสมาชิกสูงสุด</label>
-              <select
-                style={{ ...fieldStyle('max'), appearance: 'none', cursor: 'pointer' } as any}
-                value={formData.max_assignees}
-                onChange={e => setFormData({ ...formData, max_assignees: parseInt(e.target.value, 10) || 1 })}
-                onFocus={() => setFocusedField('max')}
-                onBlur={() => setFocusedField(null)}
-              >
-                {[1, 2, 3, 4, 5, 10].map(n => (
-                  <option key={n} value={n}>
-                    {n} คน
-                  </option>
-                ))}
-              </select>
-              <div style={{ position: 'absolute', right: 15, top: 38, color: '#ff6b00', pointerEvents: 'none' }}>▼</div>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: 13, color: '#ff6b00', marginBottom: 8, fontWeight: 'bold' }}>กำหนดส่ง (Deadline)</label>
-              <input
-                type="date"
-                style={fieldStyle('date') as any}
-                value={formData.due_date || ''}
-                onChange={e => setFormData({ ...formData, due_date: e.target.value })}
-              />
-            </div>
+          {/* กำหนดส่ง */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: 13, color: '#ff6b00', marginBottom: 8, fontWeight: 'bold' }}>กำหนดส่ง (Deadline)</label>
+            <input
+              type="date"
+              min={todayStr}
+              style={fieldStyle('date') as any}
+              value={formData.due_date || ''}
+              onChange={e => setFormData({ ...formData, due_date: e.target.value })}
+            />
           </div>
 
           {/* รายละเอียด */}
@@ -406,65 +363,6 @@ export default function EditTaskPage({ params }: { params: { id: string } }) {
           </div>
         </form>
 
-        {/* COMMENTS */}
-        <div style={{ marginTop: '40px' }}>
-          <h3>DISCUSSION</h3>
-          {comments.map((c, i) => (
-            <div key={i} style={{ padding: '10px', borderBottom: `1px solid ${t.border}` }}>
-              <strong>{c.author_name}</strong>
-              <div>{c.content}</div>
-            </div>
-          ))}
-
-          <input
-            style={{ ...fieldStyle('comment'), marginTop: '10px' }}
-            placeholder="เขียนคอมเมนต์..."
-            value={newComment}
-            onChange={e => setNewComment(e.target.value)}
-          />
-          <button onClick={handleSendComment} style={{ marginTop: '10px' }}>
-            SEND
-          </button>
-        </div>
-
-        {/* HISTORY / CHANGE LOGS */}
-        <div style={{ marginTop: '40px' }}>
-          <h3>HISTORY</h3>
-          {taskLogs.length === 0 && (
-            <div style={{ color: t.subText, fontSize: 13 }}>
-              ยังไม่มีบันทึกการแก้ไขงานนี้
-            </div>
-          )}
-
-          {taskLogs.map((log, index) => (
-            <div
-              key={index}
-              style={{
-                padding: '10px 0',
-                borderBottom: `1px dashed ${t.border}`,
-                fontSize: 13,
-              }}
-            >
-              <div style={{ fontWeight: 600 }}>
-                ฟิลด์ <span style={{ color: '#ff6b00' }}>{log.field}</span>{' '}
-                ถูกแก้ไข
-              </div>
-              <div style={{ color: t.subText }}>
-                จาก: <span style={{ textDecoration: 'line-through' }}>{log.old_value ?? '-'}</span>{' '}
-                เป็น: <span>{log.new_value ?? '-'}</span>
-              </div>
-              {log.changed_at && (
-                <div style={{ color: t.subText, fontSize: 12, marginTop: 2 }}>
-                  เวลา:{' '}
-                  {new Date(log.changed_at).toLocaleString('th-TH', {
-                    dateStyle: 'short',
-                    timeStyle: 'short',
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
       </div>
     </main>
   )

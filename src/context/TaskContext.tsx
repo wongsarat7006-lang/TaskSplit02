@@ -152,6 +152,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const members = Array.from(
       new Set([currentUser.email, ...inputMembers])
     )
+    const nonOwnerMembers = members.filter(email => email !== currentUser.email)
 
     const payload = {
       title: taskData.title,
@@ -163,7 +164,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       user_id: currentUser.id,
       author_email: currentUser.email,
       max_assignees: taskData.max_assignees || 1,
-      current_people: taskData.current_people ?? members.length,
+      // current_people: นับเฉพาะสมาชิกทีมที่ไม่ใช่ผู้สร้างงาน
+      current_people: nonOwnerMembers.length,
       team_members: members,
     }
     console.log('[addTask] payload:', payload)
@@ -178,6 +180,12 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const updateTask = async (task: Task) => {
     // หา task เดิมเพื่อใช้เปรียบเทียบสำหรับ log
     const previous = tasks.find(t => t.id === task.id)
+
+    // อนุญาตให้แก้ไขได้เฉพาะผู้สร้างงานเท่านั้น
+    if (previous && previous.user_id && currentUser?.id && previous.user_id !== currentUser.id) {
+      alert('คุณไม่มีสิทธิ์แก้ไขงานนี้ (เฉพาะผู้สร้างงานเท่านั้น)')
+      throw new Error('FORBIDDEN_NOT_OWNER')
+    }
 
     const { categories, ...clean } = task as any
 
@@ -252,7 +260,10 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const joinTask = async (task: Task) => {
     if (!currentUser) { alert('กรุณาเข้าสู่ระบบ'); return }
     const members = task.team_members || []
-    const currentCount = task.current_people || 0
+    const currentCount =
+      typeof task.current_people === 'number'
+        ? task.current_people
+        : Math.max(0, members.length - 1)
     const maxCount = task.max_assignees || 1
     if (members.includes(currentUser.email)) { alert('คุณรับงานนี้แล้ว'); return }
     if (currentCount >= maxCount) { alert('งานเต็มแล้ว'); return }
@@ -278,7 +289,10 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       return
     }
     const newMembers = members.filter((email: string) => email !== currentUser.email)
-    const currentCount = task.current_people ?? members.length
+    const currentCount =
+      typeof task.current_people === 'number'
+        ? task.current_people
+        : Math.max(0, members.length - 1)
     const { error } = await supabase
       .from('tasks')
       .update({

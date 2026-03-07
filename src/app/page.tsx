@@ -58,7 +58,10 @@ export default function DashboardPage() {
     if (joiningId) return
 
     const members = task.team_members || []
-    const currentCount = task.current_people || 0
+    const currentCount =
+      typeof task.current_people === 'number'
+        ? task.current_people
+        : Math.max(0, members.length - 1)
     const maxCount = task.max_assignees || 1
 
     if (members.includes(currentUser.email)) {
@@ -190,7 +193,10 @@ export default function DashboardPage() {
         {publicTasks.map(task => (
           (() => {
             const members = task.team_members || []
-            const currentCount = task.current_people ?? members.length ?? 0
+            const currentCount =
+              typeof task.current_people === 'number'
+                ? task.current_people
+                : Math.max(0, members.length - 1)
             const maxCount = task.max_assignees ?? 1
             const hasSlot = currentCount < maxCount
             const isOwner = !!currentUser && task.user_id === currentUser.id
