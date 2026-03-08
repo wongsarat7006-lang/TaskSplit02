@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "next lint",
+    "test": "next lint"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
@@ -19,6 +21,8 @@
     "@types/js-cookie": "^3.0.6",
     "@types/node": "25.2.0",
     "@types/react": "19.2.10",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "eslint": "8.56.0",
+    "eslint-config-next": "14.1.0"
   }
 }
