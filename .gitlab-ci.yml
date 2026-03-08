@@ -24,3 +24,5 @@ deploy_vercel:
     - vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
   only:
     - main
+
+    
