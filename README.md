@@ -1,5 +1,5 @@
 # 📝 Tasksplit
-https://task-split02.vercel.app/
+https://task-split02-c2en.vercel.app/
 
 > **ระบบจัดการและแบ่งส่วนงานที่ออกแบบมาเพื่อเพิ่มประสิทธิภาพในการทำงานร่วมกัน**
 
@@ -14,6 +14,9 @@ https://task-split02.vercel.app/
 | `67020746` | นายกฤตเมธ ป้องตัน | ✅ Developer / Quality Assurance |
 
 ---
+วิชา DevOps 227302
+67026089 พฤทธิพร เถื่อนคุ้ม
+67021253 วีรกร วงศ์ษารัฐ
 
 ## 🚀 เกี่ยวกับโปรเจค (About Project)
 
