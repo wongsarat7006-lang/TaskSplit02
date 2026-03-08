@@ -5,11 +5,15 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '../../lib/supabaseClient'
 import { useTasks, Task } from '../../context/TaskContext'
+import { useToast } from '../../context/ToastContext'
+import { useConfirm } from '../../context/ConfirmContext'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 
 export default function TasksPage() {
   const router = useRouter()
   const { tasks, categories, deleteTask, updateTask, leaveTask, isDarkMode, currentUser, allUsers } = useTasks()
+  const { toast } = useToast()
+  const { confirm } = useConfirm()
 
   const [hasMounted, setHasMounted] = useState(false)
 
@@ -98,19 +102,24 @@ export default function TasksPage() {
       message = `ต้องการข้ามไปเป็น "เสร็จแล้ว" ทันทีสำหรับงานนี้ใช่ไหม?\n\n"${task.title}"`
     }
 
-    const ok = confirm(message)
+    const ok = await confirm({ message })
     if (!ok) return
 
-    // อัปเดตสถานะงาน
     try {
       await updateTask({
         ...task,
         status: toStatus,
       })
+      toast('อัปเดตสถานะงานเรียบร้อย', 'success')
     } catch (err: any) {
       console.error('[onDragEnd] updateTask error', err)
-      alert(err?.message || 'อัปเดตสถานะงานไม่สำเร็จ (อาจไม่มีสิทธิ์แก้ไขงานนี้)')
+      toast(err?.message || 'อัปเดตสถานะงานไม่สำเร็จ (อาจไม่มีสิทธิ์แก้ไขงานนี้)', 'error')
     }
+  }
+
+  const handleDeleteTask = async (taskId: string) => {
+    const ok = await confirm({ message: 'ลบงานนี้?', confirmText: 'ลบ', danger: true })
+    if (ok) deleteTask(taskId)
   }
 
   return (
@@ -199,7 +208,7 @@ export default function TasksPage() {
                                 priorityLabel={priorityLabel}
                                 isDragging={snapshot.isDragging}
                                 canEdit={isAdmin}
-                                onDelete={isAdmin ? () => { if (confirm('ลบงานนี้?')) deleteTask(task.id) } : undefined}
+                                onDelete={isAdmin ? () => handleDeleteTask(task.id) : undefined}
                               />
                             </div>
                           )}

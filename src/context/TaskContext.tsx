@@ -38,6 +38,8 @@ export interface Profile {
   email?: string
   avatar_url?: string
   role?: 'admin' | 'employee' | null
+  bio?: string
+  phone?: string
 }
 
 interface TaskContextType {
@@ -100,7 +102,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const fetchAllUsers = useCallback(async () => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, email, avatar_url, role')
+      .select('id, full_name, email, avatar_url, role, bio, phone')
     console.log('[fetchAllUsers]', data, error)
     if (data) setAllUsers(data as Profile[])
   }, [])

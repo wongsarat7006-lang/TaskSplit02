@@ -4,11 +4,13 @@ import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
 import { useUser } from '../../context/UserContext'
 import { useTasks } from '../../context/TaskContext'
+import { useToast } from '../../context/ToastContext'
 import { supabase } from '../../lib/supabaseClient'
 
 export default function ProfilePage() {
   const { user, updateUser, changePassword } = useUser()
   const { tasks, isDarkMode } = useTasks()
+  const { toast } = useToast()
 
   const [isEditing, setIsEditing] = useState(false)
   const [showPasswordChange, setShowPasswordChange] = useState(false)
@@ -59,7 +61,7 @@ export default function ProfilePage() {
       setAvatar(data.publicUrl)
       
     } catch (error: any) {
-      alert('Error uploading image: ' + error.message)
+      toast('อัปโหลดรูปไม่สำเร็จ: ' + error.message, 'error')
     } finally {
       setUploading(false)
     }
@@ -73,7 +75,7 @@ export default function ProfilePage() {
       avatar,
     })
     setIsEditing(false)
-    alert('บันทึกข้อมูลเรียบร้อยแล้ว')
+    toast('บันทึกข้อมูลเรียบร้อยแล้ว', 'success')
   }
 
   const myTasks = tasks?.filter(task => {
@@ -90,23 +92,22 @@ export default function ProfilePage() {
   // ✅ เพิ่มฟังก์ชันเปลี่ยนรหัสผ่านเข้าไป
   const handleChangePassword = async () => {
     if (!newPassword || !confirmPassword) {
-      alert('กรุณากรอกรหัสผ่านใหม่ให้ครบถ้วน')
+      toast('กรุณากรอกรหัสผ่านใหม่ให้ครบถ้วน', 'error')
       return
     }
     if (newPassword !== confirmPassword) {
-      alert('รหัสผ่านใหม่ไม่ตรงกัน')
+      toast('รหัสผ่านใหม่ไม่ตรงกัน', 'error')
       return
     }
     
-    // เรียกใช้ฟังก์ชันจาก Context
     const success = await changePassword(currentPassword, newPassword)
     
     if (success) {
-      alert('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว')
+      toast('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', 'success')
       setShowPasswordChange(false)
       setCurrentPassword(''); setNewPassword(''); setConfirmPassword('')
     } else {
-      alert('เปลี่ยนรหัสผ่านไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง')
+      toast('เปลี่ยนรหัสผ่านไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง', 'error')
     }
   }
 

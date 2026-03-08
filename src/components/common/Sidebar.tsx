@@ -1,8 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import { useTasks } from '../../context/TaskContext'
+import { useConfirm } from '../../context/ConfirmContext'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { supabase } from '../../lib/supabaseClient'
 
@@ -17,18 +19,34 @@ export default function Sidebar() {
   } = useTasks()
 
   const pathname = usePathname()
-  const router = useRouter()
+  const { confirm } = useConfirm()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const sidebarWidth = isSidebarOpen ? '260px' : '72px'
 
   const handleLogout = async () => {
-    if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
-      try {
-        Cookies.remove('token')
-        await supabase.auth.signOut()
-      } finally {
-        router.push('/login')
+    if (isLoggingOut) return
+    const ok = await confirm({ message: 'คุณต้องการออกจากระบบใช่หรือไม่?', confirmText: 'ออกจากระบบ', danger: true })
+    if (!ok) return
+
+    setIsLoggingOut(true)
+    try {
+      Cookies.remove('token')
+      await supabase.auth.signOut({ scope: 'local' })
+      // ล้าง localStorage ของ Supabase ด้วย (กรณี signOut ไม่ครบ)
+      if (typeof window !== 'undefined') {
+        const keys = Object.keys(localStorage).filter(k => k.startsWith('sb-'))
+        keys.forEach(k => localStorage.removeItem(k))
       }
+    } catch {
+      // ถ้า signOut ล้มเหลว ล้าง localStorage แล้ว redirect อยู่ดี
+      if (typeof window !== 'undefined') {
+        const keys = Object.keys(localStorage).filter(k => k.startsWith('sb-'))
+        keys.forEach(k => localStorage.removeItem(k))
+      }
+    } finally {
+      // ใช้ replace เพื่อไม่ออกจากระบบแล้วกด Back กลับมาได้
+      window.location.replace('/login')
     }
   }
 
@@ -232,20 +250,25 @@ export default function Sidebar() {
           {isSidebarOpen ? '◀ COLLAPSE' : '▶'}
         </button>
 
-        <button onClick={handleLogout} style={{
-          marginTop: '10px',
-          padding: '12px',
-          borderRadius: '6px',
-          border: '1px solid rgba(239,68,68,0.35)',
-          background: isDarkMode ? 'rgba(239,68,68,0.10)' : 'rgba(239,68,68,0.08)',
-          color: isDarkMode ? '#ffb4b4' : '#b91c1c',
-          cursor: 'pointer',
-          display: 'flex',
-          width: '100%',
-          justifyContent: isSidebarOpen ? 'flex-start' : 'center',
-          gap: '10px',
-        }}>
-          🚪 {isSidebarOpen && 'ออกจากระบบ'}
+        <button
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          style={{
+            marginTop: '10px',
+            padding: '12px',
+            borderRadius: '6px',
+            border: '1px solid rgba(239,68,68,0.35)',
+            background: isDarkMode ? 'rgba(239,68,68,0.10)' : 'rgba(239,68,68,0.08)',
+            color: isDarkMode ? '#ffb4b4' : '#b91c1c',
+            cursor: isLoggingOut ? 'wait' : 'pointer',
+            display: 'flex',
+            width: '100%',
+            justifyContent: isSidebarOpen ? 'flex-start' : 'center',
+            gap: '10px',
+            opacity: isLoggingOut ? 0.8 : 1,
+          }}
+        >
+          {isLoggingOut ? '⏳' : '🚪'} {isSidebarOpen && (isLoggingOut ? 'กำลังออกจากระบบ...' : 'ออกจากระบบ')}
         </button>
       </div>
     </aside>
