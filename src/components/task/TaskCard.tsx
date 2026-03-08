@@ -163,7 +163,7 @@ export default function TaskCard({ task, index }: TaskCardProps) {
 
                   {!isOwner && (
                     <button onClick={() => joinTask(task)} style={joinBtn}>
-                      🙋‍♂️ Join
+                      🙋‍♂️ Joinn
                     </button>
                   )}
                 </div>
