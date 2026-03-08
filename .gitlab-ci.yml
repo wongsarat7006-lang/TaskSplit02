@@ -1,9 +1,18 @@
 # กำหนด Stages ตามเกณฑ์ (อย่างน้อย 1 stage คือ deploy)
 stages:
+  - test
   - build
   - deploy
 
-# 1. Stage สำหรับตรวจสอบว่า Code ของเรา Build ผ่านไหม
+test_project:
+  stage: test
+  image: node:18-alpine
+  script:
+    - npm install
+    - npm test
+  only:
+    - main
+    
 build_project:
   stage: build
   image: node:18-alpine
@@ -27,4 +36,4 @@ deploy_vercel:
 
 
 
-    
+
