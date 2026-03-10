@@ -1,5 +1,5 @@
 # 📝 Tasksplit
-https://task-split02-c2en.vercel.app/
+https://task-split02.vercel.app/
 
 > **ระบบจัดการและแบ่งส่วนงานที่ออกแบบมาเพื่อเพิ่มประสิทธิภาพในการทำงานร่วมกัน**
 
