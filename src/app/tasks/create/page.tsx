@@ -23,10 +23,6 @@ export default function CreateTaskPage() {
 
   const currentProfile = allUsers?.find((u: any) => u.email === currentUser?.email)
   const ownerDisplayName = currentProfile?.full_name || currentUser?.email || ''
-  const memberSlots = Array.from(
-    { length: formData.max_assignees || 0 },
-    (_, idx) => formData.team_members[idx] || ''
-  )
 
   const me = allUsers?.find((u: any) => u.id === currentUser?.id)
   const isAdmin = me?.role === 'admin'
@@ -41,7 +37,6 @@ export default function CreateTaskPage() {
     inputBg: '#0d0d0d'
   }
 
-  // จำกัดวันให้เลือกได้ตั้งแต่วันนี้เป็นต้นไป (ใช้เวลา local)
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
@@ -58,7 +53,6 @@ export default function CreateTaskPage() {
     transition: 'all 0.2s ease',
   })
 
-  // จำกัดสิทธิ์: ถ้าเป็นพนักงานทั่วไปให้กลับไปหน้า Task Board
   useEffect(() => {
     if (currentUser && !isAdmin) {
       alert('อนุญาตให้สร้างงานได้เฉพาะหัวหน้างาน / แอดมิน เท่านั้น')
@@ -76,7 +70,7 @@ export default function CreateTaskPage() {
 
     setIsSubmitting(true)
 
-    const expectedSlots = Math.max(0, (formData.max_assignees || 1) - 1)
+    const expectedSlots = formData.max_assignees || 0
     const memberInputs = (formData.team_members || []).slice(0, expectedSlots).map(m => String(m ?? '').trim()).filter(Boolean)
     if (memberInputs.length !== expectedSlots) {
       setIsSubmitting(false)
@@ -90,14 +84,12 @@ export default function CreateTaskPage() {
 
     const finalTeam = Array.from(new Set([currentUser.email, ...memberInputs]))
 
-    // ✅ ลบ author_email ออก เพราะไม่มีคอลัมน์นี้ใน Supabase
     const taskPayload = {
       title: formData.title,
       description: formData.description || '',
       priority: formData.priority,
       status: 'todo',
       user_id: currentUser.id,
-      // หัวหน้างานล็อกเป็นผู้สร้างงานเสมอ
       assignee: currentUser.email,
       due_date: formData.dueDate || null, 
       max_assignees: formData.max_assignees,
@@ -193,56 +185,28 @@ export default function CreateTaskPage() {
               </div>
             </div>
 
-            {/* จำนวนสมาชิกสูงสุด */}
-            <div style={{ position: 'relative' }}>
-              <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>
-                จำนวนสมาชิกสูงสุด
-              </label>
-              <select 
-                style={{ ...fieldStyle('max'), appearance: 'none', cursor: 'pointer' } as any} 
-                value={formData.max_assignees}
-                onChange={(e) => {
-                  const newMax = parseInt(e.target.value)
-                  setFormData({
-                    ...formData,
-                    max_assignees: newMax,
-                    team_members: memberSlots.slice(0, newMax),
-                  })
-                }}
-                onFocus={() => setFocusedField('max')}
-                onBlur={() => setFocusedField(null)}
-              >
-                <option value="">เลือกจากรายชื่อ (Default: ตัวคุณเอง)</option>
-                {(allUsers || []).map((user: any) => (
-                  <option key={user.id} value={user.email || ''} style={{ background: t.card }}>
-                    {(user.full_name || user.email || 'ไม่มีชื่อ').trim() || user.id}
-                  </option>
-                ))}
-              </select>
-              <div style={{ position: 'absolute', right: '15px', top: '38px', color: t.accent, pointerEvents: 'none' }}>▼</div>
-            </div>
-
             {/* จำนวนสมาชิกในทีม และ กำหนดส่ง */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
               <div style={{ position: 'relative' }}>
-                <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>จำนวนสมาชิกในทีม (รวมคุณ)</label>
+                <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>
+                  จำนวนสมาชิกในทีม (ไม่รวมคุณ)
+                </label>
                 <select 
                   style={{ ...fieldStyle('max'), appearance: 'none', cursor: 'pointer' } as any} 
                   value={formData.max_assignees}
                   onChange={(e) => {
-                    const nextMax = Math.max(1, parseInt(e.target.value))
-                    const nextSlots = Math.max(0, nextMax - 1)
+                    const nextMax = Math.max(0, parseInt(e.target.value))
                     setFormData(prev => {
                       const prevMembers = Array.isArray(prev.team_members) ? prev.team_members : []
-                      const trimmed = prevMembers.map(m => String(m ?? '').trim()).slice(0, nextSlots)
-                      const padded = [...trimmed, ...Array.from({ length: Math.max(0, nextSlots - trimmed.length) }, () => '')]
+                      const trimmed = prevMembers.map(m => String(m ?? '').trim()).slice(0, nextMax)
+                      const padded = [...trimmed, ...Array.from({ length: Math.max(0, nextMax - trimmed.length) }, () => '')]
                       return { ...prev, max_assignees: nextMax, team_members: padded }
                     })
                   }}
                   onFocus={() => setFocusedField('max')}
                   onBlur={() => setFocusedField(null)}
                 >
-                  {[1, 2, 3, 4, 5, 10].map(n => (
+                  {[1, 2, 3, 4, 5, 9].map(n => (
                     <option key={n} value={n} style={{ background: t.card }}>{n} คน</option>
                   ))}
                 </select>
@@ -261,14 +225,14 @@ export default function CreateTaskPage() {
               </div>
             </div>
 
-            {/* สมาชิกทีมตามจำนวนที่เลือก - ดึงชื่อจาก DB และคนที่เลือกแล้วจะไม่โผล่ในช่องถัดไป */}
+            {/* สมาชิกทีมตามจำนวนที่เลือก */}
             <div>
               <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>
-                สมาชิกทีม ({Math.max(0, formData.max_assignees - 1)} คน)
+                สมาชิกทีม ({formData.max_assignees} คน)
               </label>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {Array.from({ length: Math.max(0, formData.max_assignees - 1) }).map((_, idx) => {
+                {Array.from({ length: formData.max_assignees }).map((_, idx) => {
                   const selectedInOtherSlots = new Set(
                     (formData.team_members || []).filter((_, i) => i !== idx).map(m => String(m ?? '').trim()).filter(Boolean)
                   )
@@ -315,6 +279,7 @@ export default function CreateTaskPage() {
               </div>
             </div>
 
+            {/* รายละเอียดงาน */}
             <div>
               <label style={{ display: 'block', fontSize: '13px', color: t.accent, marginBottom: '8px', fontWeight: 'bold' }}>รายละเอียดงาน</label>
               <textarea 
