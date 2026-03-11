@@ -30,28 +30,33 @@ export default function Sidebar() {
     if (!ok) return
 
     setIsLoggingOut(true)
-    try {
-      Cookies.remove('token')
-      await supabase.auth.signOut({ scope: 'local' })
-      // ล้าง localStorage ของ Supabase ด้วย (กรณี signOut ไม่ครบ)
-      if (typeof window !== 'undefined') {
-        const keys = Object.keys(localStorage).filter(k => k.startsWith('sb-'))
-        keys.forEach(k => localStorage.removeItem(k))
-      }
-    } catch {
-      // ถ้า signOut ล้มเหลว ล้าง localStorage แล้ว redirect อยู่ดี
-      if (typeof window !== 'undefined') {
-        const keys = Object.keys(localStorage).filter(k => k.startsWith('sb-'))
-        keys.forEach(k => localStorage.removeItem(k))
-      }
-    } finally {
-      // ใช้ replace เพื่อไม่ออกจากระบบแล้วกด Back กลับมาได้
-      window.location.replace('/login')
+
+    // ล้างทุกอย่างทันทีก่อน signOut
+    if (typeof window !== 'undefined') {
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('sb-'))
+        .forEach(k => localStorage.removeItem(k))
+
+      Object.keys(sessionStorage)
+        .filter(k => k.startsWith('sb-'))
+        .forEach(k => sessionStorage.removeItem(k))
+
+      document.cookie.split(';').forEach(c => {
+        const key = c.trim().split('=')[0]
+        if (key.startsWith('sb-')) {
+          document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+        }
+      })
     }
+
+    // ไม่ต้อง await เพราะบางครั้ง hang → redirect ทันทีหลัง 300ms
+    supabase.auth.signOut({ scope: 'global' }).catch(() => {})
+    setTimeout(() => {
+      window.location.replace('/login')
+    }, 300)
   }
 
   const t = {
-    // ทำให้ sidebar "ตัด" กับพื้นหลังมากขึ้น และเพิ่ม contrast ของตัวหนังสือในโหมดมืด
     bg:        isDarkMode ? '#070707' : '#ffffff',
     border:    isDarkMode ? 'rgba(255,107,0,0.22)' : 'rgba(255,107,0,0.12)',
     borderStr: isDarkMode ? 'rgba(255,107,0,0.55)' : 'rgba(255,107,0,0.45)',
@@ -65,7 +70,6 @@ export default function Sidebar() {
 
   const thaiFont = "'Sarabun', sans-serif"
   const engFont  = "'Bebas Neue', 'Impact', sans-serif"
-  const monoFont = "'Courier New', monospace"
 
   const me = allUsers.find((u: any) => u.id === currentUser?.id)
   const isAdmin = me?.role === 'admin'
@@ -74,7 +78,6 @@ export default function Sidebar() {
     <aside
       style={{
         width: sidebarWidth,
-        // ให้ sidebar ยาวชนล่างจอ และอยู่กับที่เวลาเลื่อน
         height: '100dvh',
         minHeight: '100vh',
         position: 'sticky',
@@ -83,7 +86,7 @@ export default function Sidebar() {
         transition: 'width 0.3s ease',
         display: 'flex',
         flexDirection: 'column',
-        flexShrink: 0,                // ⭐ สำคัญ
+        flexShrink: 0,
         overflow: 'hidden',
         borderRight: `1px solid ${t.border}`,
         boxShadow: t.shadow,
@@ -103,7 +106,7 @@ export default function Sidebar() {
         }}
       />
 
-      {/* Accent divider to increase separation */}
+      {/* Accent divider */}
       <div style={{
         position: 'absolute',
         top: 0,
@@ -234,7 +237,7 @@ export default function Sidebar() {
           {isSidebarOpen && <span style={{ color: t.subText }}>โหมดมืด</span>}
         </button>
 
-        {/* Controls */}
+        {/* Collapse */}
         <button onClick={toggleSidebar} style={{
           padding: '12px',
           borderRadius: '6px',
@@ -250,6 +253,7 @@ export default function Sidebar() {
           {isSidebarOpen ? '◀ COLLAPSE' : '▶'}
         </button>
 
+        {/* Logout */}
         <button
           onClick={handleLogout}
           disabled={isLoggingOut}
